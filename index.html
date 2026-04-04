@@ -1645,7 +1645,7 @@
       const recurring = document.getElementById('expenseRecurring').value === 'sim';
       const accountVal = document.getElementById('expenseAccount').value;
       const account = resolveAccountName(accountVal);
-      const card = !isEntrada && isCardAccount(account);
+      const card = !isEntrada && isCardAccount(document.getElementById('expenseAccount').value);
 
       document.querySelectorAll('.field-saida').forEach(el => el.style.display = isEntrada ? 'none' : 'flex');
       document.querySelectorAll('.field-recurring').forEach(el => el.style.display = 'flex');
@@ -1745,11 +1745,12 @@
       const type = document.getElementById('expenseType').value;
       const description = document.getElementById('expenseDesc').value.trim();
       const totalValue = Number(document.getElementById('expenseValue').value || 0);
-      const account = document.getElementById('expenseAccount').value;
+      const accountVal = document.getElementById('expenseAccount').value;
+      const account = resolveAccountName(accountVal);
       const hiddenBaseDate = document.getElementById('expenseDate').value;
       const purchaseDate = document.getElementById('expensePurchaseDate').value || hiddenBaseDate || new Date().toISOString().slice(0,10);
       const paymentDate = document.getElementById('expensePaymentDate').value || hiddenBaseDate || purchaseDate;
-      const date = isCardAccount(account) ? paymentDate : (hiddenBaseDate || paymentDate || purchaseDate);
+      const date = isCardAccount(accountVal) ? paymentDate : (hiddenBaseDate || paymentDate || purchaseDate);
       const category = document.getElementById('expenseCategory').value || 'OUTROS';
       const installments = Math.max(1, Number(document.getElementById('expenseInstallments').value || 1));
       const status = document.getElementById('expenseStatus').value || 'previsto';
