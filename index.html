@@ -1670,8 +1670,11 @@
       } else {
         descInput.placeholder = 'Ex: iFood, escola, mercado';
         dateLabel.textContent = 'Data da compra';
-        const category = document.getElementById('expenseCategory').value;
-        document.getElementById('expenseBlock').value = autoBlockByCategory(category);
+        const currentBlock = document.getElementById('expenseBlock').value;
+        if (!currentBlock) {
+          const category = document.getElementById('expenseCategory').value;
+          document.getElementById('expenseBlock').value = autoBlockByCategory(category);
+        }
       }
     }
 
@@ -1761,10 +1764,7 @@
       const recurring = document.getElementById('expenseRecurring').value === 'sim';
       const recurringEndDate = document.getElementById('expenseRecurringEnd').value || '';
       let block = document.getElementById('expenseBlock').value;
-      // Only auto-assign block when creating new (not editing) and no chip selected
-      if (type !== 'entrada' && !data.editingPurchaseId && !block) {
-        block = autoBlockByCategory(category);
-      } else if (type !== 'entrada' && !block) {
+      if (type !== 'entrada' && !block) {
         block = autoBlockByCategory(category);
       }
 
@@ -2208,9 +2208,12 @@
     // btnEntrada and btnSaida handled via onclick in HTML (setFormType)
     document.getElementById('expenseCategory').addEventListener('change', () => {
       const category = document.getElementById('expenseCategory').value;
-      const block = autoBlockByCategory(category);
-      document.getElementById('expenseBlock').value = block;
-      selectBlockChip(block);
+      // Only auto-assign block if editing=false and no chip manually selected
+      if (!data.editingPurchaseId) {
+        const block = autoBlockByCategory(category);
+        document.getElementById('expenseBlock').value = block;
+        selectBlockChip(block);
+      }
       renderFormMode();
     });
     document.getElementById('expenseAccount').addEventListener('change', renderFormMode);
