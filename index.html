@@ -554,6 +554,10 @@
       .finance-grid { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr 1fr; }
       .view-switch { display: none; }
+      .stat-value { font-size: 20px; }
+      .block-card { overflow: hidden; }
+      .block-head { gap: 4px; }
+      .block-head .badge { font-size: 10px; padding: 3px 6px; flex-shrink: 0; }
     }
 
     /* === BULK SELECT === */
@@ -1549,31 +1553,27 @@
           p.isRecurring && p.recurringEndDate ? `<span style="${TAG}background:rgba(255,255,255,.08);color:var(--muted);border:1px solid var(--border);">até ${formatDate(p.recurringEndDate)}</span>` : ''
         ].filter(Boolean).join('');
         return `
-          <div class="purchase-row" id="prow-${p.id}" style="align-items:flex-start;padding:12px 0;gap:10px;">
-            <input type="checkbox" class="purchase-row-check" data-id="${p.id}" style="display:none;margin-top:3px;" onchange="onBulkCheck()" />
-            <div style="width:36px;height:36px;border-radius:10px;background:var(--card-2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${isEntrada ? '💰' : (TXN_ICONS[p.category]||'💳')}</div>
+          <div class="purchase-row" id="prow-${p.id}" style="align-items:center;padding:8px 0;gap:8px;">
+            <input type="checkbox" class="purchase-row-check" data-id="${p.id}" style="display:none;flex-shrink:0;" onchange="onBulkCheck()" />
+            <div style="width:32px;height:32px;border-radius:8px;background:var(--card-2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">${isEntrada ? '💰' : (TXN_ICONS[p.category]||'💳')}</div>
             <div style="flex:1;min-width:0;">
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
+              <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:2px;">
                 <span class="type-badge ${isEntrada ? 'entrada' : 'saida'}" style="flex-shrink:0;">${isEntrada ? 'ENTRADA' : 'SAÍDA'}</span>
                 ${statusBadge(p.status)}
-                ${!isEntrada ? `<span class="badge" style="flex-shrink:0;font-size:11px;padding:3px 8px;border-radius:99px;background:${{'Essenciais':'rgba(59,130,246,.15)','Fixos':'rgba(168,85,247,.15)','Variáveis':'rgba(249,115,22,.15)','Estratégico':'rgba(16,185,129,.15)'}[p.block]||'rgba(255,255,255,.08)'};color:${{'Essenciais':'#3b82f6','Fixos':'#a855f7','Variáveis':'#f97316','Estratégico':'#10b981'}[p.block]||'var(--muted)'};border:none;">${p.block}</span>` : ''}
+                ${!isEntrada ? `<span style="${TAG_STYLE}background:${{'Essenciais':'rgba(59,130,246,.15)','Fixos':'rgba(168,85,247,.15)','Variáveis':'rgba(249,115,22,.15)','Estratégico':'rgba(16,185,129,.15)'}[p.block]||'rgba(255,255,255,.08)'};color:${{'Essenciais':'#3b82f6','Fixos':'#a855f7','Variáveis':'#f97316','Estratégico':'#10b981'}[p.block]||'var(--muted)'};border:1px solid transparent;">${p.block}</span>` : ''}
                 ${extraBadges}
               </div>
-              <div style="font-size:14px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.description}</div>
-              <div class="small" style="color:var(--muted);">
-                ${!isEntrada ? `${p.category} · ${p.account}` : p.account}
-                ${!isEntrada && p.installments > 1 ? ` · ${currentInstallment}/${p.installments}` : ''}
-                · ${dateInfo}
-              </div>
+              <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.description}</div>
+              <div style="font-size:11px;color:var(--muted);">${!isEntrada ? `${p.category} · ` : ''}${p.account}${!isEntrada && p.installments > 1 ? ` · ${currentInstallment}/${p.installments}` : ''} · ${dateInfo}</div>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
-              <strong style="font-size:15px;">${brl(amount)}</strong>
-              <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
+              <strong style="font-size:14px;">${brl(amount)}</strong>
+              <div style="display:flex;gap:4px;">
                 ${p.status === 'previsto'
-                  ? `<button class="ok" style="padding:4px 10px;font-size:12px;" onclick="markPurchaseStatus('${p.id}','efetivado')">Efetivar</button>`
-                  : `<button class="warn" style="padding:4px 10px;font-size:12px;" onclick="markPurchaseStatus('${p.id}','previsto')">Previsto</button>`}
-                <button style="padding:4px 10px;font-size:12px;" onclick="editPurchase('${p.id}')">Editar</button>
-                <button class="danger" style="padding:4px 10px;font-size:12px;" onclick="removePurchase('${p.id}')">Excluir</button>
+                  ? `<button class="ok" style="padding:3px 8px;font-size:11px;" onclick="markPurchaseStatus('${p.id}','efetivado')">Efetivar</button>`
+                  : `<button class="warn" style="padding:3px 8px;font-size:11px;" onclick="markPurchaseStatus('${p.id}','previsto')">Previsto</button>`}
+                <button style="padding:3px 8px;font-size:11px;" onclick="editPurchase('${p.id}')">Editar</button>
+                <button class="danger" style="padding:3px 8px;font-size:11px;" onclick="removePurchase('${p.id}')">Excluir</button>
               </div>
             </div>
           </div>`;
