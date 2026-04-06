@@ -543,13 +543,17 @@
       .mini-bar-group { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 480px) {
-      .wrap { padding: 12px 12px 24px; }
+      .wrap { padding: 0 12px 84px; }
+      .topbar { display: none; }
+      .mobile-sticky-header { display: block; }
+      .mobile-bottom-nav { display: block; }
+      .donut-section { display: block; }
+      .recent-txn-section { display: block; }
       .grid-5, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .grid-3, .grid-2 { grid-template-columns: 1fr; }
       .finance-grid { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr 1fr; }
-      .topbar { flex-wrap: wrap; gap: 8px; }
-      .topbar h1 { font-size: 18px; }
+      .view-switch { display: none; }
     }
 
     /* === BULK SELECT === */
