@@ -1761,7 +1761,12 @@
       const recurring = document.getElementById('expenseRecurring').value === 'sim';
       const recurringEndDate = document.getElementById('expenseRecurringEnd').value || '';
       let block = document.getElementById('expenseBlock').value;
-      if (type !== 'entrada') block = autoBlockByCategory(category);
+      // Only auto-assign block when creating new (not editing) and no chip selected
+      if (type !== 'entrada' && !data.editingPurchaseId && !block) {
+        block = autoBlockByCategory(category);
+      } else if (type !== 'entrada' && !block) {
+        block = autoBlockByCategory(category);
+      }
 
       if (!description || !totalValue || !date) return alert('Preencha descrição, valor e data.');
       if (recurring && !recurringEndDate) return alert('Escolha até quando essa recorrência vai.');
