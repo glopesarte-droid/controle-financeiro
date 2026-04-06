@@ -1506,6 +1506,7 @@
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
                 <span class="type-badge ${isEntrada ? 'entrada' : 'saida'}" style="flex-shrink:0;">${isEntrada ? 'ENTRADA' : 'SAÍDA'}</span>
+                ${!isEntrada ? `<span class="badge" style="flex-shrink:0;font-size:11px;padding:3px 8px;border-radius:99px;background:${{'Essenciais':'rgba(59,130,246,.15)','Fixos':'rgba(168,85,247,.15)','Variáveis':'rgba(249,115,22,.15)','Estratégico':'rgba(16,185,129,.15)'}[p.block]||'rgba(255,255,255,.08)'};color:${{'Essenciais':'#3b82f6','Fixos':'#a855f7','Variáveis':'#f97316','Estratégico':'#10b981'}[p.block]||'var(--muted)'};border:none;">${p.block}</span>` : ''}
                 <strong style="font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.description}</strong>
               </div>
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
@@ -1869,9 +1870,9 @@
       data.editingPurchaseId = id;
       fillFormFromPurchase(purchase);
       data.novaCompraOpen = true;
-      render();
-      // Start at step 1 so user can edit all fields
+      // Go to step 1 before render so render doesn't override
       goToStep1();
+      render();
       window.scrollTo({ top: document.querySelector('#expenseDesc').getBoundingClientRect().top + window.scrollY - 100, behavior: 'smooth' });
     }
 
