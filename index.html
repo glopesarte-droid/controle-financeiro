@@ -543,16 +543,13 @@
       .mini-bar-group { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
     @media (max-width: 480px) {
-      .wrap { padding: 0 12px 84px; }
-      .topbar { display: none; }
-      .mobile-sticky-header { display: block; }
-      .mobile-bottom-nav { display: block; }
-      .donut-section { display: block; }
-      .recent-txn-section { display: block; }
+      .wrap { padding: 12px 12px 24px; }
       .grid-5, .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .grid-3, .grid-2 { grid-template-columns: 1fr; }
       .finance-grid { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr 1fr; }
+      .topbar { flex-wrap: wrap; gap: 8px; }
+      .topbar h1 { font-size: 18px; }
     }
 
     /* === BULK SELECT === */
@@ -1550,6 +1547,7 @@
         return `
           <div class="purchase-row" id="prow-${p.id}" style="align-items:flex-start;padding:12px 0;gap:10px;">
             <input type="checkbox" class="purchase-row-check" data-id="${p.id}" style="display:none;margin-top:3px;" onchange="onBulkCheck()" />
+            <div style="width:36px;height:36px;border-radius:10px;background:var(--card-2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">${isEntrada ? '💰' : (TXN_ICONS[p.category]||'💳')}</div>
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px;">
                 <span class="type-badge ${isEntrada ? 'entrada' : 'saida'}" style="flex-shrink:0;">${isEntrada ? 'ENTRADA' : 'SAÍDA'}</span>
@@ -2165,7 +2163,11 @@
     }
 
     // ===== RECENT TXN =====
-    const TXN_ICONS={MERCADO:'🛒',ALIMENTACAO:'🍽️',TRANSPORTE:'🚗',SAUDE:'💊',EDUCACAO:'📚',LAZER:'🎬',ASSINATURAS:'📱',INVESTIMENTO:'📈',MORADIA:'🏠',CARRO:'🚙',OUTROS:'💳',ENTRADA:'💼'};
+    const TXN_ICONS={
+      MERCADO:'🛒', ALIMENTACAO:'🍽️', TRANSPORTE:'🚌', SAUDE:'💊',
+      EDUCACAO:'📚', LAZER:'🎬', ASSINATURAS:'📱', INVESTIMENTO:'📈',
+      MORADIA:'🏠', CARRO:'🚗', OUTROS:'💳', ENTRADA:'💰'
+    };
     function renderRecentTxn() {
       const el = document.getElementById('recentTxnList');
       if (!el) return;
