@@ -555,6 +555,32 @@
       .finance-grid { grid-template-columns: 1fr; }
       .form-grid { grid-template-columns: 1fr 1fr; }
     }
+
+    /* === CSV IMPORT MODAL === */
+    .import-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:2000;align-items:center;justify-content:center;padding:16px}
+    .import-overlay.open{display:flex}
+    .import-modal{background:var(--card);border:1px solid var(--border);border-radius:18px;width:100%;max-width:940px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+    .import-modal-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+    .import-modal-body{padding:20px;overflow-y:auto;flex:1}
+    .import-modal-foot{padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;flex-shrink:0;flex-wrap:wrap}
+    .import-drop{border:2px dashed var(--border);border-radius:14px;padding:36px 20px;text-align:center;cursor:pointer;transition:border-color .15s;margin-bottom:16px}
+    .import-drop:hover,.import-drop.dragover{border-color:#6366f1}
+    .import-summary{background:var(--card-2);border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;gap:20px;flex-wrap:wrap;align-items:center}
+    .import-summary span{font-size:13px;color:var(--muted)}
+    .import-summary strong{font-size:16px;font-weight:700;color:var(--text)}
+    .import-tbl{width:100%;border-collapse:collapse;font-size:13px}
+    .import-tbl th{text-align:left;padding:8px 8px;border-bottom:1px solid var(--border);color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+    .import-tbl td{padding:7px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+    .import-tbl tr:last-child td{border-bottom:none}
+    .import-tbl tr.row-skip td{opacity:.35}
+    .import-tbl tr.row-skip td input,.import-tbl tr.row-skip td select{opacity:.5}
+    .ibl-sel{padding:4px 6px;border-radius:8px;font-size:12px;border:1px solid var(--border);background:var(--card-2);color:var(--text);font-family:inherit}
+    .iparc-btn{background:transparent;border:1px solid var(--border);border-radius:6px;padding:2px 7px;font-size:11px;color:var(--muted);cursor:pointer;line-height:1.4}
+    .iparc-input{width:48px;padding:3px 6px;border-radius:6px;font-size:12px;border:1px solid var(--border);background:var(--card-2);color:var(--text);display:none;font-family:inherit}
+    .iparc-input.open{display:inline-block}
+    .import-configs{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px;align-items:flex-end}
+    .import-configs .field{flex:1;min-width:160px}
+
   </style>
 </head>
 <body>
@@ -610,6 +636,7 @@
         <span id="syncStatus" style="font-size:12px;color:var(--muted);">☁ Aguardando</span>
         <button id="exportBtn">Exportar</button>
         <button id="importBtn">Importar</button>
+        <button id="importCsvBtn" style="background:var(--card-2);border:1px solid var(--border);border-radius:12px;padding:10px 14px;font-size:14px;cursor:pointer;color:var(--text);">&#128196; Importar Fatura</button>
         <button id="toggleTheme" class="icon-btn" aria-label="Alternar modo claro e escuro">☀</button>
         <input id="importFile" type="file" accept="application/json" class="hidden" />
       </div>
@@ -2254,6 +2281,222 @@
     window.toggleAddCardForm=toggleAddCardForm;
     window.selectCardColor=selectCardColor;
 
+
+    // ===== CSV IMPORT =====
+    const C6_CAT_MAP = {
+      'Supermercados / Mercearia / Padarias / Lojas de Conveniência': 'Essenciais',
+      'Assistência médica e odontológica': 'Essenciais',
+      'Educacional': 'Essenciais',
+      'Restaurante / Lanchonete / Bar': 'Variáveis',
+      'Entretenimento': 'Variáveis',
+      'Vestuário / Roupas': 'Variáveis',
+      'Departamento / Desconto': 'Variáveis',
+      'Especialidade varejo': 'Variáveis',
+      'Casa / Escritório Mobiliário': 'Variáveis',
+      'Construção': 'Variáveis',
+      'Elétrico': 'Variáveis',
+      'Automotivo': 'Fixos',
+      'Relacionados a Automotivo': 'Fixos',
+      'Serviços de telecomunicações': 'Fixos',
+      'Serviços pessoais': 'Fixos',
+      'Limpeza / Lavanderia': 'Fixos',
+      'Seguro': 'Fixos',
+      'Serviços Profissionais': 'Estratégico',
+      'Associação': 'Estratégico',
+      'Marketing Direto': 'Variáveis',
+      'Empresa para empresa': 'Estratégico',
+    };
+
+    let importRows = [];
+
+    function openImportModal() {
+      document.getElementById('importOverlay').classList.add('open');
+      document.getElementById('importStep1').style.display = 'block';
+      document.getElementById('importStep2').style.display = 'none';
+      document.getElementById('importConfirmBtn').style.display = 'none';
+      importRows = [];
+      // populate card select
+      const sel = document.getElementById('importCardTarget');
+      sel.innerHTML = (data.cards||[]).map(cd => `<option value="${cd.name}">${cd.name}</option>`).join('');
+    }
+
+    function closeImportModal() {
+      document.getElementById('importOverlay').classList.remove('open');
+      document.getElementById('csvFileInput').value = '';
+    }
+
+    function handleCsvFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const text = e.target.result;
+          parseC6Csv(text);
+        } catch(err) {
+          alert('Erro ao ler o arquivo: ' + err.message);
+        }
+      };
+      reader.readAsText(file, 'UTF-8');
+    }
+
+    function parseC6Csv(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length < 2) { alert('Arquivo vazio ou inválido.'); return; }
+      // Detect separator
+      const sep = lines[0].includes(';') ? ';' : ',';
+      const header = lines[0].split(sep).map(h => h.trim());
+      // Find column indexes
+      const iDate = header.findIndex(h => h.toLowerCase().includes('data'));
+      const iDesc = header.findIndex(h => h.toLowerCase().includes('descri'));
+      const iCat  = header.findIndex(h => h.toLowerCase().includes('categoria'));
+      const iParc = header.findIndex(h => h.toLowerCase().includes('parcela'));
+      const iVal  = header.length - 1; // last column = Valor (em R$)
+
+      importRows = [];
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const cols = line.split(sep);
+        const rawVal = cols[iVal]?.replace(',','.') || '0';
+        const val = parseFloat(rawVal);
+        if (isNaN(val) || val <= 0) continue;
+        const cat = cols[iCat]?.trim() || '';
+        const desc = cols[iDesc]?.trim() || '';
+        const dateRaw = cols[iDate]?.trim() || '';
+        const parcRaw = cols[iParc]?.trim() || '1/1';
+        const parcTotal = parseInt(parcRaw.split('/')[1]) || 1;
+        const block = C6_CAT_MAP[cat] || 'Variáveis';
+        importRows.push({ desc, date: dateRaw, val, cat, block, parcTotal, include: true, id: crypto.randomUUID() });
+      }
+
+      if (!importRows.length) { alert('Nenhuma transação encontrada.'); return; }
+      renderImportPreview();
+    }
+
+    function renderImportPreview() {
+      document.getElementById('importStep1').style.display = 'none';
+      document.getElementById('importStep2').style.display = 'block';
+      document.getElementById('importConfirmBtn').style.display = 'inline-block';
+      updateImportSummary();
+
+      const tbody = document.getElementById('importTableBody');
+      tbody.innerHTML = importRows.map((row, i) => `
+        <tr id="irow-${i}" class="${row.include ? '' : 'row-skip'}">
+          <td><input type="checkbox" class="import-row-check" data-i="${i}" ${row.include ? 'checked' : ''} style="accent-color:#6366f1" onchange="toggleImportRow(${i},this.checked)"/></td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${row.desc}">${row.desc}</td>
+          <td style="white-space:nowrap">${row.date}</td>
+          <td style="white-space:nowrap;font-weight:600;">${brl(row.val)}</td>
+          <td>
+            <select class="ibl-sel" data-i="${i}" onchange="importRows[${i}].block=this.value;updateImportSummary()">
+              ${['Essenciais','Fixos','Variáveis','Estratégico'].map(b=>`<option value="${b}" ${b===row.block?'selected':''}>${b}</option>`).join('')}
+            </select>
+          </td>
+          <td>
+            <button class="iparc-btn" onclick="toggleParcInput(${i})" title="Definir número de parcelas">
+              ${row.parcTotal > 1 ? row.parcTotal+'x' : '+'}
+            </button>
+            <input class="iparc-input ${row.parcTotal>1?'open':''}" type="number" min="1" max="48" value="${row.parcTotal}" data-i="${i}"
+              onchange="importRows[${i}].parcTotal=Math.max(1,parseInt(this.value)||1);this.previousElementSibling.textContent=importRows[${i}].parcTotal+'x'" />
+          </td>
+        </tr>`).join('');
+    }
+
+    function toggleParcInput(i) {
+      const btn = document.querySelector(`.iparc-btn[onclick="toggleParcInput(${i})"]`);
+      const inp = btn?.nextElementSibling;
+      if (inp) { inp.classList.toggle('open'); if (inp.classList.contains('open')) inp.focus(); }
+    }
+
+    function toggleImportRow(i, checked) {
+      importRows[i].include = checked;
+      const tr = document.getElementById('irow-'+i);
+      if (tr) tr.className = checked ? '' : 'row-skip';
+      updateImportSummary();
+    }
+
+    function toggleAllImportRows(checked) {
+      importRows.forEach((r,i) => { r.include = checked; toggleImportRow(i, checked); });
+    }
+
+    function applyDefaultBlock() {
+      const block = document.getElementById('importDefaultBlock').value;
+      importRows.forEach((r,i) => {
+        r.block = block;
+        const sel = document.querySelector(`select.ibl-sel[data-i="${i}"]`);
+        if (sel) sel.value = block;
+      });
+      updateImportSummary();
+    }
+
+    function updateImportSummary() {
+      const selected = importRows.filter(r => r.include);
+      const total = selected.reduce((s,r) => s+r.val, 0);
+      document.getElementById('importSummary').innerHTML = `
+        <span>Selecionados <strong>${selected.length}</strong></span>
+        <span>Total <strong>${brl(total)}</strong></span>
+        <span>Pulados <strong>${importRows.length - selected.length}</strong></span>
+      `;
+    }
+
+    function confirmImport() {
+      const cardName = document.getElementById('importCardTarget').value;
+      if (!cardName) { alert('Selecione um cartão.'); return; }
+      const selected = importRows.filter(r => r.include);
+      if (!selected.length) { alert('Nenhuma linha selecionada.'); return; }
+
+      selected.forEach(row => {
+        // parse date DD/MM/YYYY -> YYYY-MM-DD
+        const parts = row.date.split('/');
+        const isoDate = parts.length === 3 ? `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}` : new Date().toISOString().slice(0,10);
+        const purchase = {
+          id: crypto.randomUUID(),
+          description: row.desc,
+          totalValue: row.val,
+          date: isoDate,
+          purchaseDate: isoDate,
+          paymentDate: isoDate,
+          account: cardName,
+          block: row.block,
+          category: 'OUTROS',
+          installments: row.parcTotal,
+          status: 'previsto',
+          isRecurring: false,
+          recurringEndDate: '',
+          recurrenceFrequency: '',
+          isCard: true
+        };
+        data.purchases.unshift(purchase);
+        applyPurchaseBalanceImpact(purchase, 1);
+      });
+
+      render();
+      closeImportModal();
+      alert(`✅ ${selected.length} lançamentos importados com sucesso!`);
+    }
+
+    // Drag and drop
+    const dropZone = document.getElementById('importDrop');
+    if (dropZone) {
+      dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+      dropZone.addEventListener('drop', e => {
+        e.preventDefault(); dropZone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) handleCsvFile(file);
+      });
+    }
+
+    document.getElementById('importCsvBtn').addEventListener('click', openImportModal);
+    document.getElementById('importOverlay').addEventListener('click', e => { if (e.target === document.getElementById('importOverlay')) closeImportModal(); });
+    window.openImportModal = openImportModal;
+    window.closeImportModal = closeImportModal;
+    window.handleCsvFile = handleCsvFile;
+    window.toggleImportRow = toggleImportRow;
+    window.toggleAllImportRows = toggleAllImportRows;
+    window.applyDefaultBlock = applyDefaultBlock;
+    window.toggleParcInput = toggleParcInput;
+    window.confirmImport = confirmImport;
+
     window.removeAccount = removeAccount;
     window.editAccount = editAccount;
     window.editCard = editCard;
@@ -2360,6 +2603,69 @@
       });
     });
   </script>
+
+
+  <!-- CSV IMPORT MODAL -->
+  <div class="import-overlay" id="importOverlay">
+    <div class="import-modal">
+      <div class="import-modal-head">
+        <div>
+          <div style="font-size:16px;font-weight:700;">Importar Fatura CSV</div>
+          <div class="small">Formato C6: Data de Compra;Nome;Final;Categoria;Descrição;Parcela;US$;Cotação;Valor R$</div>
+        </div>
+        <button onclick="closeImportModal()" style="background:transparent;border:none;font-size:20px;color:var(--muted);cursor:pointer;">&#10005;</button>
+      </div>
+      <div class="import-modal-body" id="importModalBody">
+        <!-- Step 1: upload -->
+        <div id="importStep1">
+          <div class="import-drop" id="importDrop" onclick="document.getElementById('csvFileInput').click()">
+            <div style="font-size:32px;margin-bottom:8px;">&#128196;</div>
+            <div style="font-weight:600;margin-bottom:4px;">Arraste o arquivo CSV ou clique para selecionar</div>
+            <div class="small">Exportado direto do app C6 Bank</div>
+          </div>
+          <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCsvFile(this.files[0])"/>
+        </div>
+        <!-- Step 2: preview -->
+        <div id="importStep2" style="display:none;">
+          <div class="import-configs">
+            <div class="field">
+              <label>Direcionar para o cartão</label>
+              <select id="importCardTarget" class="ibl-sel" style="width:100%;padding:8px 10px;font-size:13px;"></select>
+            </div>
+            <div class="field">
+              <label>Bloco padrão (pode alterar por linha)</label>
+              <select id="importDefaultBlock" class="ibl-sel" style="width:100%;padding:8px 10px;font-size:13px;" onchange="applyDefaultBlock()">
+                <option value="Essenciais">Essenciais</option>
+                <option value="Fixos">Fixos</option>
+                <option value="Variáveis" selected>Variáveis</option>
+                <option value="Estratégico">Estratégico</option>
+              </select>
+            </div>
+          </div>
+          <div class="import-summary" id="importSummary"></div>
+          <div style="overflow-x:auto;">
+            <table class="import-tbl">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="importCheckAll" checked onchange="toggleAllImportRows(this.checked)" style="accent-color:#6366f1"/></th>
+                  <th>Descrição</th>
+                  <th>Data</th>
+                  <th>Valor</th>
+                  <th>Bloco</th>
+                  <th title="Parcelas — use apenas na primeira importação">Parc.</th>
+                </tr>
+              </thead>
+              <tbody id="importTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="import-modal-foot">
+        <button onclick="closeImportModal()">Cancelar</button>
+        <button id="importConfirmBtn" class="primary" style="display:none" onclick="confirmImport()">&#10003; Importar selecionados</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
