@@ -1700,6 +1700,9 @@
       if (matchCard) accVal = 'cartao:' + matchCard.id;
       else if (matchAcc) accVal = 'conta:' + matchAcc.id;
       document.getElementById('expenseAccount').value = accVal;
+      // update value display
+      const vdt = document.getElementById('valueDisplayText');
+      if (vdt) vdt.textContent = parseFloat(purchase.totalValue||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
       document.getElementById('expenseStatus').value = purchase.status || (purchase.block === 'Entrada' ? 'efetivado' : 'previsto');
       if (purchase.block !== 'Entrada') { document.getElementById('expenseBlock').value = purchase.block; selectBlockChip(purchase.block); }
       document.getElementById('expenseCategory').value = purchase.category === 'ENTRADA' ? 'OUTROS' : purchase.category;
@@ -1867,6 +1870,8 @@
       fillFormFromPurchase(purchase);
       data.novaCompraOpen = true;
       render();
+      // Start at step 1 so user can edit all fields
+      goToStep1();
       window.scrollTo({ top: document.querySelector('#expenseDesc').getBoundingClientRect().top + window.scrollY - 100, behavior: 'smooth' });
     }
 
