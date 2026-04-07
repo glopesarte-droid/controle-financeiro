@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iIzBiMGIwZiIvPjxjaXJjbGUgY3g9IjE2IiBjeT0iMTYiIHI9IjExIiBmaWxsPSIjMWExYTJlIiBzdHJva2U9IiM2MzY2ZjEiIHN0cm9rZS13aWR0aD0iMS41Ii8+PHRleHQgeD0iMTYiIHk9IjIxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjNjM2NmYxIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiI+JDwvdGV4dD48L3N2Zz4=" /><rect width="32" height="32" rx="6" fill="%230b0b0f"/><circle cx="16" cy="16" r="11" fill="%231a1a2e" stroke="%236366f1" stroke-width="1.5"/><text x="16" y="21" text-anchor="middle" font-size="14" font-weight="700" fill="%236366f1" font-family="Arial,sans-serif">$</text></svg>" /><rect width='32' height='32' rx='6' fill='%230b0b0f'/><circle cx='16' cy='16' r='11' fill='%231a1a2e' stroke='%236366f1' stroke-width='1.5'/><text x='16' y='21' text-anchor='middle' font-size='14' font-weight='700' fill='%236366f1' font-family='Arial,sans-serif'>$</text></svg>" />  <rect width=%2732%27 height=%2732%27 rx=%278%27 fill=%27%230b0b0f%27/>  <rect x=%276%27 y=%2720%27 width=%274%27 height=%277%27 rx=%271%27 fill=%27%2322c55e%27/>  <rect x=%2712%27 y=%2714%27 width=%274%27 height=%2713%27 rx=%271%27 fill=%27%233b82f6%27/>  <rect x=%2718%27 y=%278%27 width=%274%27 height=%2719%27 rx=%271%27 fill=%27%236366f1%27/>  <rect x=%2724%27 y=%2712%27 width=%274%27 height=%2715%27 rx=%271%27 fill=%27%23a855f7%27/>  <polyline points=%278,20 14,14 20,8 28,12%27 stroke=%27%23f59e0b%27 stroke-width=%272%27 fill=%27none%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/></svg>" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiI+PHJlY3Qgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIiByeD0iNiIgZmlsbD0iIzBiMGIwZiIvPjxjaXJjbGUgY3g9IjE2IiBjeT0iMTYiIHI9IjExIiBmaWxsPSIjMWExYTJlIiBzdHJva2U9IiM2MzY2ZjEiIHN0cm9rZS13aWR0aD0iMS41Ii8+PHRleHQgeD0iMTYiIHk9IjIxIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LXNpemU9IjE0IiBmb250LXdlaWdodD0iNzAwIiBmaWxsPSIjNjM2NmYxIiBmb250LWZhbWlseT0iQXJpYWwsc2Fucy1zZXJpZiI+JDwvdGV4dD48L3N2Zz4=" />
   <title>Controle Financeiro</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -50,6 +50,7 @@
     body.light { background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%); }
 
     .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 32px; width: 100%; }
+    @media (max-width: 480px) { }
     h1, h2, h3, h4, p { margin: 0; }
 
     .topbar {
@@ -59,6 +60,16 @@
       gap: 12px;
       margin-bottom: 18px;
       flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      background: var(--bg);
+      padding: 12px 0;
+      margin-top: -12px;
+      border-bottom: 1px solid var(--border);
+    }
+    @media (max-width: 480px) {
+      .topbar { position: static; border-bottom: none; padding: 0; margin-top: 0; }
     }
     .topbar-left, .topbar-right {
       display: flex;
@@ -575,6 +586,16 @@
     .card-accordion-body { display: none; }
     .card-accordion-body.open { display: block; }
 
+    /* === INLINE EDIT === */
+    .inline-edit-form {
+      background: var(--card-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin: 4px 0 8px 44px;
+    }
+    .inline-edit-form .form-grid { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 10px; }
+
     /* === BULK SELECT === */
     .bulk-bar{display:none;align-items:center;gap:10px;padding:8px 12px;background:var(--card-2);border-radius:12px;margin-bottom:10px;flex-wrap:wrap}
     .bulk-bar.active{display:flex}
@@ -682,7 +703,7 @@
       </div>
     </div>
 
-    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+    <div class="monthly-only" style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
       <button id="importCsvBtn" style="background:var(--card-2);border:1px solid var(--border);border-radius:12px;padding:8px 14px;font-size:13px;cursor:pointer;color:var(--text);">&#128196; Importar Fatura</button>
     </div>
     <div class="grid grid-4" id="topStats"></div>
@@ -706,39 +727,16 @@
       <div class="card" style="margin-top:16px;">
         <div class="toolbar">
           <div>
-            <div class="section-title" style="margin-bottom:4px;">Meses do ano</div>
-            <div class="small">Cada mês mostra saldo, limite de gasto e resultado.</div>
+            <div class="section-title" style="margin-bottom:4px;">Planejamento anual</div>
+            <div class="small">Entradas, saídas, limite e saldo mês a mês. Barras mostram distribuição por bloco.</div>
           </div>
         </div>
         <div class="annual-month-grid" id="annualHighlights"></div>
       </div>
 
-      <div class="card" style="margin-top:16px;">
-        <div class="toolbar">
-          <div>
-            <div class="section-title" style="margin-bottom:4px;">Comparativo mês a mês</div>
-            <div class="small">Limite total do mês e quanto foi usado em cada grupo.</div>
-          </div>
-        </div>
-        <div class="legend">
-          <span class="legend-item"><span class="legend-dot dot-income" style="background:var(--info);"></span>Limite do mês</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--essenciais);"></span>Essenciais</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--fixos);"></span>Fixos</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--variaveis);"></span>Variáveis</span>
-          <span class="legend-item"><span class="legend-dot" style="background:var(--estrategico);"></span>Estratégico</span>
-        </div>
-        <div class="mini-bars by-block" id="annualBars"></div>
-      </div>
 
-      <div class="card" style="margin-top:16px;">
-        <div class="toolbar">
-          <div>
-            <div class="section-title" style="margin-bottom:4px;">Blocos no ano</div>
-            <div class="small">Total acumulado por bloco, separado entre efetivado e previsto.</div>
-          </div>
-        </div>
-        <div class="grid grid-4" id="annualBlocksGrid"></div>
-      </div>
+
+
     </div>
 
     <div class="card monthly-only" style="margin-top:16px;">
@@ -1341,45 +1339,35 @@
       const summary = annualSummary();
       const breakdown = annualBreakdown();
 
-      document.getElementById('annualHighlights').innerHTML = breakdown.map(row => `
-        <div class="annual-month-box">
-          <div class="month-name">${row.name}</div>
-          <div class="month-line"><span>Saldo</span><strong>${brl(row.saldo)}</strong></div>
-          <div class="month-line"><span>Limite de gasto</span><strong>${brl(row.limit)}</strong></div>
-          <div class="month-line"><span>Resultado</span><strong class="${row.resultado >= 0 ? 'positive' : 'negative'}">${brl(row.resultado)}</strong></div>
-        </div>
-      `).join('');
-
-      const maxValue = Math.max(1, ...breakdown.flatMap(row => [row.limit, row.blocks['Essenciais'], row.blocks['Fixos'], row.blocks['Variáveis'], row.blocks['Estratégico']]));
-      document.getElementById('annualBars').innerHTML = breakdown.map(row => `
-        <div class="mini-bar-col">
-          <div class="mini-bar-group">
-            <div class="mini-bar limit" style="height:${Math.max(8, (row.limit / maxValue) * 210)}px" title="Limite: ${brl(row.limit)}"></div>
-            <div class="mini-bar essenciais" style="height:${Math.max(8, (row.blocks['Essenciais'] / maxValue) * 210)}px" title="Essenciais: ${brl(row.blocks['Essenciais'])}"></div>
-            <div class="mini-bar fixos" style="height:${Math.max(8, (row.blocks['Fixos'] / maxValue) * 210)}px" title="Fixos: ${brl(row.blocks['Fixos'])}"></div>
-            <div class="mini-bar variaveis" style="height:${Math.max(8, (row.blocks['Variáveis'] / maxValue) * 210)}px" title="Variáveis: ${brl(row.blocks['Variáveis'])}"></div>
-            <div class="mini-bar estrategico" style="height:${Math.max(8, (row.blocks['Estratégico'] / maxValue) * 210)}px" title="Estratégico: ${brl(row.blocks['Estratégico'])}"></div>
-          </div>
-          <div class="mini-bar-label">${row.name.slice(0,3)}</div>
-        </div>
-      `).join('');
-
-      const blockTotals = annualTotalsByBlock();
-      document.getElementById('annualBlocksGrid').innerHTML = BLOCKS.map(block => {
-        const total = (blockTotals[block]?.previsto || 0) + (blockTotals[block]?.efetivado || 0);
+      const curMonth = data.currentMonth;
+      const BCOLS = {'Essenciais':'#3b82f6','Fixos':'#a855f7','Variáveis':'#f97316','Estratégico':'#10b981'};
+      document.getElementById('annualHighlights').innerHTML = breakdown.map(row => {
+        const saidas = row.efetivado + row.previsto;
+        const saldo = row.entradas - saidas;
+        const isCurrentMonth = row.monthIndex === curMonth;
+        const blockBars = BLOCKS.map(block => {
+          const val = row.blocks[block] || 0;
+          const pct = saidas > 0 ? Math.round(val / saidas * 100) : 0;
+          return pct > 0 ? `
+            <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+              <div style="width:${Math.min(pct,100)}%;max-width:100%;height:6px;border-radius:99px;background:${BCOLS[block]};min-width:4px;"></div>
+              <span style="font-size:10px;color:var(--muted);white-space:nowrap;">${pct}%</span>
+            </div>` : '';
+        }).join('');
         return `
-          <div class="card block-card ${blockClassName(block)}">
-            <div class="block-head">
-              <div>
-                <div class="stat-title ${chipClassName(block)}">${block}</div>
-                <div style="font-size:24px;font-weight:800;">${brl(total)}</div>
-              </div>
-            </div>
-            <div class="small">Efetivado: ${brl(blockTotals[block]?.efetivado || 0)}</div>
-            <div class="small">Previsto: ${brl(blockTotals[block]?.previsto || 0)}</div>
+        <div class="annual-month-box" style="${isCurrentMonth ? 'border:1px solid #6366f1;' : ''}">
+          <div class="month-name" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>${row.name}</span>
+            ${isCurrentMonth ? '<span style="font-size:10px;color:#6366f1;font-weight:600;">atual</span>' : ''}
           </div>
-        `;
+          <div class="month-line"><span>Entradas</span><strong style="color:var(--ok)">${brl(row.entradas)}</strong></div>
+          <div class="month-line"><span>Sa&#237;das</span><strong style="color:${saidas > 0 ? 'var(--danger)' : 'var(--text)'}">${brl(saidas)}</strong></div>
+          <div class="month-line"><span>Limite</span><strong>${brl(row.limit)}</strong></div>
+          <div class="month-line" style="border-bottom:none;padding-bottom:0;"><span>Saldo</span><strong class="${saldo >= 0 ? 'positive' : 'negative'}">${brl(saldo)}</strong></div>
+          ${saidas > 0 ? `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">${blockBars}</div>` : ''}
+        </div>`;
       }).join('');
+
     }
 
         function renderViewMode() {
@@ -1587,7 +1575,7 @@
             <div style="text-align:right;flex-shrink:0;">
               <div style="font-size:13px;font-weight:600;">${brl(amount)}</div>
               <div style="display:flex;gap:3px;margin-top:2px;">
-                <button style="padding:2px 6px;font-size:10px;" onclick="editPurchase('${p.id}')">Editar</button>
+                <button style="padding:2px 6px;font-size:10px;" onclick="editPurchaseInline('${p.id}')">Editar</button>
                 <button class="danger" style="padding:2px 6px;font-size:10px;" onclick="removePurchase('${p.id}')">Excluir</button>
               </div>
             </div>
@@ -1648,7 +1636,7 @@
                 ${p.status === 'previsto'
                   ? `<button class="ok" style="padding:3px 8px;font-size:11px;" onclick="markPurchaseStatus('${p.id}','efetivado')">Efetivar</button>`
                   : `<button class="warn" style="padding:3px 8px;font-size:11px;" onclick="markPurchaseStatus('${p.id}','previsto')">Previsto</button>`}
-                <button style="padding:3px 8px;font-size:11px;" onclick="editPurchase('${p.id}')">Editar</button>
+                <button style="padding:3px 8px;font-size:11px;" onclick="editPurchaseInline('${p.id}')">Editar</button>
                 <button class="danger" style="padding:3px 8px;font-size:11px;" onclick="removePurchase('${p.id}')">Excluir</button>
               </div>
             </div>
@@ -2755,6 +2743,85 @@
       render();
     }
 
+
+    // ===== INLINE EDIT =====
+    function editPurchaseInline(id) {
+      // Remove any existing inline form
+      document.querySelectorAll('.inline-edit-form').forEach(el => el.remove());
+
+      const purchase = data.purchases.find(p => p.id === id);
+      if (!purchase) return;
+
+      const row = document.getElementById('prow-' + id);
+      if (!row) { editPurchase(id); return; }
+
+      const isEntrada = purchase.block === 'Entrada';
+      const accountOptions = [
+        ...data.accounts.map(a => `<option value="conta:${a.id}" ${purchase.account === a.name ? 'selected' : ''}>${a.name}</option>`),
+        ...(data.cards||[]).map(cd => `<option value="cartao:${cd.id}" ${purchase.account === cd.name ? 'selected' : ''}>${cd.name}</option>`)
+      ].join('');
+      const blockOptions = ['Essenciais','Fixos','Variáveis','Estratégico'].map(b =>
+        `<option value="${b}" ${purchase.block === b ? 'selected' : ''}>${b}</option>`).join('');
+      const catOptions = ['MORADIA','MERCADO','ALIMENTACAO','TRANSPORTE','CARRO','SAUDE','EDUCACAO','LAZER','ASSINATURAS','INVESTIMENTO','OUTROS'].map(cat =>
+        `<option value="${cat}" ${purchase.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
+
+      const form = document.createElement('div');
+      form.className = 'inline-edit-form';
+      form.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <span style="font-size:13px;font-weight:600;">Editar lançamento</span>
+          <button onclick="this.closest('.inline-edit-form').remove()" style="background:transparent;border:none;color:var(--muted);font-size:16px;cursor:pointer;">✕</button>
+        </div>
+        <div class="form-grid">
+          <div class="field"><label>Descrição</label><input id="ie-desc" value="${purchase.description}" /></div>
+          <div class="field"><label>Valor</label><input id="ie-val" type="number" step="0.01" value="${purchase.totalValue}" /></div>
+          <div class="field"><label>Conta</label><select id="ie-acc">${accountOptions}</select></div>
+          ${!isEntrada ? `<div class="field"><label>Bloco</label><select id="ie-block">${blockOptions}</select></div>` : ''}
+          ${!isEntrada ? `<div class="field"><label>Categoria</label><select id="ie-cat">${catOptions}</select></div>` : ''}
+          <div class="field"><label>Status</label><select id="ie-status">
+            <option value="previsto" ${purchase.status==='previsto'?'selected':''}>Previsto</option>
+            <option value="efetivado" ${purchase.status==='efetivado'?'selected':''}>Efetivado</option>
+          </select></div>
+          <div class="field"><label>Data</label><input id="ie-date" type="date" value="${purchase.paymentDate||purchase.date||''}" /></div>
+          ${!isEntrada ? `<div class="field"><label>Parcelas</label><input id="ie-inst" type="number" min="1" value="${purchase.installments||1}" /></div>` : ''}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end;">
+          <button onclick="this.closest('.inline-edit-form').remove()">Cancelar</button>
+          <button class="primary" onclick="saveInlineEdit('${id}')">Salvar</button>
+        </div>`;
+      row.insertAdjacentElement('afterend', form);
+      form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function saveInlineEdit(id) {
+      const purchase = data.purchases.find(p => p.id === id);
+      if (!purchase) return;
+      const desc = document.getElementById('ie-desc')?.value.trim();
+      const val = Number(document.getElementById('ie-val')?.value || 0);
+      const accVal = document.getElementById('ie-acc')?.value || '';
+      const block = document.getElementById('ie-block')?.value || purchase.block;
+      const cat = document.getElementById('ie-cat')?.value || purchase.category;
+      const status = document.getElementById('ie-status')?.value || purchase.status;
+      const date = document.getElementById('ie-date')?.value || purchase.date;
+      const inst = Math.max(1, parseInt(document.getElementById('ie-inst')?.value || 1));
+      if (!desc || !val) { alert('Preencha descrição e valor.'); return; }
+      const account = resolveAccountName(accVal) || purchase.account;
+      applyPurchaseBalanceImpact(purchase, -1);
+      purchase.description = desc;
+      purchase.totalValue = val;
+      purchase.account = account;
+      purchase.isCard = isCardAccount(accVal);
+      purchase.block = block;
+      purchase.category = cat;
+      purchase.status = status;
+      purchase.date = date;
+      purchase.paymentDate = date;
+      purchase.installments = inst;
+      applyPurchaseBalanceImpact(purchase, 1);
+      document.querySelectorAll('.inline-edit-form').forEach(el => el.remove());
+      render();
+    }
+
     function toggleAccordion(id) {
       const body = document.getElementById(id);
       const arrow = document.getElementById('arrow-' + id);
@@ -2767,6 +2834,8 @@
     window.editAccount = editAccount;
     window.toggleAccordion = toggleAccordion;
     window.deleteCardInvoice = deleteCardInvoice;
+    window.editPurchaseInline = editPurchaseInline;
+    window.saveInlineEdit = saveInlineEdit;
     window.toggleBulkMode = toggleBulkMode;
     window.toggleBulkAll = toggleBulkAll;
     window.onBulkCheck = onBulkCheck;
