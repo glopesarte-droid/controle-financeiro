@@ -560,6 +560,20 @@
       .block-head .badge { font-size: 10px; padding: 3px 6px; flex-shrink: 0; }
     }
 
+    /* === CARD ACCORDION === */
+    .card-accordion { border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; overflow: hidden; }
+    .card-accordion-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; cursor: pointer; background: var(--card-2);
+      user-select: none;
+    }
+    .card-accordion-header:hover { opacity: .9; }
+    .card-accordion-left { display: flex; align-items: center; gap: 10px; }
+    .card-accordion-arrow { font-size: 12px; color: var(--muted); transition: transform .2s; }
+    .card-accordion-arrow.open { transform: rotate(180deg); }
+    .card-accordion-body { display: none; }
+    .card-accordion-body.open { display: block; }
+
     /* === BULK SELECT === */
     .bulk-bar{display:none;align-items:center;gap:10px;padding:8px 12px;background:var(--card-2);border-radius:12px;margin-bottom:10px;flex-wrap:wrap}
     .bulk-bar.active{display:flex}
@@ -834,7 +848,7 @@
           <div class="form-value-display"><span class="currency-symbol">R$</span><span id="valueDisplayText">0,00</span></div>
           <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:12px;">
             <div class="field" style="grid-column:1/-1;"><label id="expenseDescLabel">Descri&#231;&#227;o</label><input id="expenseDesc" placeholder="Ex: iFood, escola, mercado" /></div>
-            <div class="field"><label>Valor</label><input id="expenseValue" type="number" step="0.01" placeholder="0,00" inputmode="decimal" oninput="document.getElementById('valueDisplayText').textContent=parseFloat(this.value||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})" /></div>
+            <div class="field"><label id="valueLbl">Valor</label><input id="expenseValue" type="number" step="0.01" placeholder="0,00" inputmode="decimal" oninput="document.getElementById('valueDisplayText').textContent=parseFloat(this.value||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})" /></div>
             <div class="field"><label>Conta</label><select id="expenseAccount"></select></div>
           </div>
           <div class="field field-saida" style="margin-top:12px;">
@@ -973,6 +987,8 @@
         }));
       if (!migrated.accounts.length) migrated.accounts = structuredClone(defaultData.accounts);
 
+      // Sync isCard flag with current cards
+      const currentCardNames = (migrated.cards||[]).map(c=>c.name);
       migrated.purchases = migrated.purchases.map((purchase) => ({
         id: purchase.id || crypto.randomUUID(),
         description: purchase.description || '',
@@ -988,7 +1004,7 @@
         isRecurring: Boolean(purchase.isRecurring),
         recurringEndDate: purchase.recurringEndDate || '',
         recurrenceFrequency: purchase.recurrenceFrequency || 'monthly',
-        isCard: CARD_NAMES.includes(purchase.account),
+        isCard: currentCardNames.includes(purchase.account) || CARD_NAMES.includes(purchase.account),
       }));
 
       Object.keys(migrated.limitsByMonth).forEach((key) => {
@@ -1151,7 +1167,7 @@
             entries.push({
               sourceId: purchase.id,
               description: purchase.description,
-              amount: Number(purchase.totalValue) / Number(purchase.installments),
+              amount: Number(purchase.totalValue), // totalValue is per-installment
               account: purchase.account,
               block: purchase.block,
               category: purchase.category,
@@ -1529,20 +1545,79 @@
 
         const text = [p.description, p.block, p.category, p.account, p.totalValue, p.installments, p.status].join(' ').toLowerCase();
         return !search || text.includes(search);
+      }).sort((a, b) => {
+        const da = new Date((a.paymentDate || a.date) + 'T12:00:00');
+        const db = new Date((b.paymentDate || b.date) + 'T12:00:00');
+        return da - db; // closest date first
       });
 
       document.getElementById('filterAll').classList.toggle('active', data.movementFilter === 'all');
       document.getElementById('filterEntradas').classList.toggle('active', data.movementFilter === 'entrada');
       document.getElementById('filterSaidas').classList.toggle('active', data.movementFilter === 'saida');
 
-      document.getElementById('purchasesList').innerHTML = filtered.length ? filtered.map(p => {
+      // Separate card purchases from regular ones
+      const cardPurchases = {};
+      const regularPurchases = [];
+      filtered.forEach(p => {
+        if (p.isCard && p.block !== 'Entrada') {
+          if (!cardPurchases[p.account]) cardPurchases[p.account] = [];
+          cardPurchases[p.account].push(p);
+        } else {
+          regularPurchases.push(p);
+        }
+      });
+
+      // Build card accordion HTML
+      const cardAccordionHtml = Object.entries(cardPurchases).map(([cardName, items]) => {
+        const total = items.reduce((s, p) => {
+          const amt = Number(p.totalValue);
+          return s + amt;
+        }, 0);
+        const accordionId = 'acc-' + cardName.replace(/\s+/g, '-');
+        const itemsHtml = items.map(p => {
+          const amount = Number(p.totalValue);
+          const dateInfo = formatDate(p.paymentDate || p.date);
+          return `<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid var(--border);">
+            <div style="width:28px;height:28px;border-radius:7px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">${TXN_ICONS[p.category]||'💳'}</div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.description}</div>
+              <div style="font-size:11px;color:var(--muted);">${p.category} · ${dateInfo}</div>
+            </div>
+            <div style="text-align:right;flex-shrink:0;">
+              <div style="font-size:13px;font-weight:600;">${brl(amount)}</div>
+              <div style="display:flex;gap:3px;margin-top:2px;">
+                <button style="padding:2px 6px;font-size:10px;" onclick="editPurchase('${p.id}')">Editar</button>
+                <button class="danger" style="padding:2px 6px;font-size:10px;" onclick="removePurchase('${p.id}')">Excluir</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('');
+
+        return `<div class="card-accordion">
+          <div class="card-accordion-header" onclick="toggleAccordion('${accordionId}')">
+            <div class="card-accordion-left">
+              <span style="font-size:13px;font-weight:600;">${cardName}</span>
+              <span style="font-size:11px;color:var(--muted);">${items.length} lançamento${items.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation()">
+              <strong style="font-size:14px;">${brl(total)}</strong>
+              <button class="danger btn-sm" onclick="deleteCardInvoice('${cardName}')" style="font-size:11px;padding:3px 8px;">&#128465; Excluir fatura</button>
+              <span class="card-accordion-arrow" id="arrow-${accordionId}" onclick="toggleAccordion('${accordionId}');event.stopPropagation()">▼</span>
+            </div>
+          </div>
+          <div class="card-accordion-body" id="${accordionId}">${itemsHtml}</div>
+        </div>`;
+      }).join('');
+
+      document.getElementById('purchasesList').innerHTML = filtered.length ? cardAccordionHtml + filtered.map(p => {
+        if (p.isCard && p.block !== 'Entrada') return ''; // skip — already in accordion
         const isCard = CARD_NAMES.includes(p.account);
         const isEntrada = p.block === 'Entrada';
         const current = new Date(data.currentYear, data.currentMonth, 1);
         const baseMonth = normalizeToMonth(p.paymentDate || p.date);
         const diffMonths = (current.getFullYear() - baseMonth.getFullYear()) * 12 + (current.getMonth() - baseMonth.getMonth());
         const currentInstallment = Math.max(1, Math.min(p.installments || 1, diffMonths + 1));
-        const amount = p.isRecurring ? Number(p.totalValue) : Number(p.totalValue) / Number(p.installments || 1);
+        const amount = Number(p.totalValue); // totalValue IS the installment value
         const dateInfo = isCard
           ? `${formatDate(p.purchaseDate)} → pgto ${formatDate(p.paymentDate)}`
           : formatDate(p.date);
@@ -1577,7 +1652,7 @@
               </div>
             </div>
           </div>`;
-      }).join('') : '<div class="small">Nenhuma movimentação encontrada neste mês.</div>';
+      }).filter(Boolean).join('') : '<div class="small">Nenhuma movimentação encontrada neste mês.</div>';
     }
 
     function renderInvoiceCards() {
@@ -2180,7 +2255,7 @@
       el.innerHTML = recent.map(p=>{
         const isE = p.block==='Entrada';
         const icon = TXN_ICONS[p.category]||'💳';
-        const amt = p.isRecurring?Number(p.totalValue):Number(p.totalValue)/Number(p.installments||1);
+        const amt = Number(p.totalValue);
         return `<div class="recent-txn-item">
           <div class="txn-emoji-icon">${icon}</div>
           <div class="txn-info-col"><div class="txn-info-name">${p.description}</div><div class="txn-info-sub">${isE?'Entrada':p.block} &bull; ${p.account}</div></div>
@@ -2280,6 +2355,7 @@
     });
     safeOn('expenseAccount', 'change', renderFormMode);
     safeOn('expenseRecurring', 'change', renderFormMode);
+    safeOn('expenseInstallments', 'input', renderFormMode);
     document.addEventListener('click', (e) => {
       const pop = document.getElementById('helpPopover');
       if (!e.target.classList.contains('help-btn')) {
@@ -2533,20 +2609,22 @@
     function confirmImport() {
       const cardName = document.getElementById('importCardTarget').value;
       if (!cardName) { alert('Selecione um cartão.'); return; }
+      const paymentDateVal = document.getElementById('importPaymentDate').value;
+      if (!paymentDateVal) { alert('Informe o vencimento da fatura.'); return; }
       const selected = importRows.filter(r => r.include);
       if (!selected.length) { alert('Nenhuma linha selecionada.'); return; }
 
       selected.forEach(row => {
-        // parse date DD/MM/YYYY -> YYYY-MM-DD
+        // parse purchase date DD/MM/YYYY -> YYYY-MM-DD
         const parts = row.date.split('/');
-        const isoDate = parts.length === 3 ? `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}` : new Date().toISOString().slice(0,10);
+        const purchaseIsoDate = parts.length === 3 ? `${parts[2]}-${parts[1].padStart(2,'0')}-${parts[0].padStart(2,'0')}` : paymentDateVal;
         const purchase = {
           id: crypto.randomUUID(),
           description: row.desc,
           totalValue: row.val,
-          date: isoDate,
-          purchaseDate: isoDate,
-          paymentDate: isoDate,
+          date: paymentDateVal,
+          purchaseDate: purchaseIsoDate,
+          paymentDate: paymentDateVal,
           account: cardName,
           block: row.block,
           category: 'OUTROS',
@@ -2660,8 +2738,34 @@
       render();
     }
 
+
+
+    function deleteCardInvoice(cardName) {
+      const ids = data.purchases
+        .filter(p => p.account === cardName && p.isCard && p.block !== 'Entrada')
+        .map(p => p.id);
+      if (!ids.length) { alert('Nenhum lançamento encontrado para este cartão.'); return; }
+      if (!confirm(`Excluir TODOS os ${ids.length} lançamentos do ${cardName}? Esta ação não pode ser desfeita.`)) return;
+      ids.forEach(id => {
+        const p = data.purchases.find(x => x.id === id);
+        if (p) applyPurchaseBalanceImpact(p, -1);
+      });
+      data.purchases = data.purchases.filter(p => !(p.account === cardName && p.isCard && p.block !== 'Entrada'));
+      render();
+    }
+
+    function toggleAccordion(id) {
+      const body = document.getElementById(id);
+      const arrow = document.getElementById('arrow-' + id);
+      if (!body) return;
+      const isOpen = body.classList.toggle('open');
+      if (arrow) arrow.classList.toggle('open', isOpen);
+    }
+
     window.removeAccount = removeAccount;
     window.editAccount = editAccount;
+    window.toggleAccordion = toggleAccordion;
+    window.deleteCardInvoice = deleteCardInvoice;
     window.toggleBulkMode = toggleBulkMode;
     window.toggleBulkAll = toggleBulkAll;
     window.onBulkCheck = onBulkCheck;
@@ -2831,6 +2935,10 @@
             <div class="field">
               <label>Direcionar para o cartão</label>
               <select id="importCardTarget" class="ibl-sel" style="width:100%;padding:8px 10px;font-size:13px;"></select>
+            </div>
+            <div class="field">
+              <label>Vencimento da fatura *</label>
+              <input type="date" id="importPaymentDate" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:10px;background:var(--card-2);color:var(--text);" />
             </div>
             <div class="field">
               <label>Bloco padrão (pode alterar por linha)</label>
