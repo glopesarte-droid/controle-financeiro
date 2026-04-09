@@ -129,6 +129,7 @@
     .account-row:last-child, .list-row:last-child, .purchase-row:last-child, .invoice-row:last-child { border-bottom: 0; }
 
     .block-card { cursor: pointer; transition: transform .15s ease, border-color .15s ease; }
+    .block-card.selected { transform: translateY(-2px); }
     .block-card:hover { transform: translateY(-1px); }
     .block-head {
       display: flex; justify-content: space-between; align-items: flex-start;
@@ -744,6 +745,7 @@
         <div class="section-title" style="margin-bottom:0;">Blocos</div>
       </div>
       <div class="grid grid-4" id="blocksGrid"></div>
+      <div id="blockDetail" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);"></div>
     </div>
 
     <div class="card monthly-only" style="margin-top:16px;">
@@ -891,15 +893,7 @@
       </div>
     </div>
 
-    <div class="card monthly-only" style="margin-top:16px;">
-      <div class="toolbar">
-        <div class="section-title" style="margin-bottom:0;">Detalhe do bloco</div>
-        <button id="toggleDetalheBloco" class="icon-btn" aria-label="Abrir ou fechar detalhe do bloco">▾</button>
-      </div>
-      <div id="detalheBlocoBody" class="collapse-body">
-        <div id="blockDetail" class="muted-box">Clique em um bloco para ver o detalhamento.</div>
-      </div>
-    </div>
+
 
     <div class="card monthly-only" style="margin-top:16px;">
       <div class="toolbar">
@@ -1467,7 +1461,7 @@
         const remain = limit - used;
         const percent = limit > 0 ? Math.round((used / limit) * 100) : 0;
         return `
-          <div class="card block-card ${blockClassName(block)}" onclick="selectBlock('${block}')">
+          <div class="card block-card ${blockClassName(block)}${data.selectedBlock === block ? ' selected' : ''}" onclick="selectBlock('${block}')">
             <div class="block-head">
               <div>
                 <div class="stat-title ${chipClassName(block)}"><span class="label-help">${block}<button class="help-btn" onclick="toggleHelp(event, '${helpByBlock[block].replace(/'/g, "&#39;")}')">?</button></span></div>
@@ -1486,10 +1480,12 @@
 
     function renderBlockDetail() {
       const target = document.getElementById('blockDetail');
+      if (!target) return;
       if (!data.selectedBlock) {
-        target.innerHTML = 'Clique em um bloco para ver o detalhamento.';
+        target.style.display = 'none';
         return;
       }
+      target.style.display = 'block';
       const rows = currentMonthEntries().filter(r => r.block === data.selectedBlock);
       const grouped = {};
       rows.forEach(r => {
@@ -1796,12 +1792,12 @@
       document.getElementById('financeiroBase').classList.toggle('hidden', !data.financeiroBaseOpen);
       document.getElementById('novaCompraBody').classList.toggle('hidden', !data.novaCompraOpen);
       document.getElementById('faturasBody').classList.toggle('hidden', !data.faturasOpen);
-      document.getElementById('detalheBlocoBody').classList.toggle('hidden', !data.detalheBlocoOpen);
+
       document.getElementById('comprasMesBody').classList.toggle('hidden', !data.comprasMesOpen);
       updateToggleIcon('toggleFinanceiro', data.financeiroBaseOpen);
       updateToggleIcon('toggleNovaCompra', data.novaCompraOpen);
       updateToggleIcon('toggleFaturas', data.faturasOpen);
-      updateToggleIcon('toggleDetalheBloco', data.detalheBlocoOpen);
+
       updateToggleIcon('toggleComprasMes', data.comprasMesOpen);
     }
 
@@ -1996,8 +1992,7 @@
     }
 
     function selectBlock(block) {
-      data.selectedBlock = block;
-      data.detalheBlocoOpen = true;
+      data.selectedBlock = data.selectedBlock === block ? null : block;
       render();
       save();
     }
