@@ -1309,6 +1309,8 @@
         })();
         const gastoTotal = efetivado + previsto;
         const saldoMes = baseBalance + entradas;
+        const key = monthKey(data.currentYear, monthIndex);
+        const monthLimits = data.limitsByMonth[key] || { total: 0, Essenciais: 0, Fixos: 0, 'Variáveis': 0, 'Estratégico': 0 };
         return {
           monthIndex,
           name,
@@ -1317,6 +1319,7 @@
           previsto,
           fatura,
           limit,
+          blockLimits: monthLimits,
           gastoTotal,
           saldo: saldoMes,
           resultado: saldoMes - gastoTotal,
@@ -1347,11 +1350,14 @@
         const isCurrentMonth = row.monthIndex === curMonth;
         const blockBars = BLOCKS.map(block => {
           const val = row.blocks[block] || 0;
-          const pct = saidas > 0 ? Math.round(val / saidas * 100) : 0;
+          const blockLimit = Number(row.blockLimits?.[block] || 0);
+          const pct = blockLimit > 0 ? Math.round(val / blockLimit * 100) : (saidas > 0 ? Math.round(val / saidas * 100) : 0);
           return pct > 0 ? `
             <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
-              <div style="width:${Math.min(pct,100)}%;max-width:100%;height:6px;border-radius:99px;background:${BCOLS[block]};min-width:4px;"></div>
-              <span style="font-size:10px;color:var(--muted);white-space:nowrap;">${pct}%</span>
+              <div style="flex:1;background:var(--border);border-radius:99px;height:6px;overflow:hidden;">
+                <div style="width:${Math.min(pct,100)}%;height:6px;border-radius:99px;background:${BCOLS[block]};"></div>
+              </div>
+              <span style="font-size:10px;color:var(--muted);white-space:nowrap;min-width:30px;text-align:right;">${pct}%</span>
             </div>` : '';
         }).join('');
         return `
@@ -1562,39 +1568,21 @@
           const amt = Number(p.totalValue);
           return s + amt;
         }, 0);
-        const accordionId = 'acc-' + cardName.replace(/\s+/g, '-');
-        const itemsHtml = items.map(p => {
-          const amount = Number(p.totalValue);
-          const dateInfo = formatDate(p.paymentDate || p.date);
-          return `<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;border-top:1px solid var(--border);">
-            <div style="width:28px;height:28px;border-radius:7px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">${TXN_ICONS[p.category]||'💳'}</div>
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.description}</div>
-              <div style="font-size:11px;color:var(--muted);">${p.category} · ${dateInfo}</div>
+        // Determine payment date and status from items
+        const payDate = items[0]?.paymentDate || items[0]?.date || '';
+        const allEfetivado = items.every(p => p.status === 'efetivado');
+        const status = allEfetivado ? 'efetivado' : 'previsto';
+        return `<div style="display:flex;align-items:center;padding:8px 0;gap:8px;border-bottom:1px solid var(--border);">
+          <div style="width:32px;height:32px;border-radius:8px;background:var(--card-2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💳</div>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:2px;">
+              <span class="type-badge saida">SAÍDA</span>
+              ${statusBadge(status)}
             </div>
-            <div style="text-align:right;flex-shrink:0;">
-              <div style="font-size:13px;font-weight:600;">${brl(amount)}</div>
-              <div style="display:flex;gap:3px;margin-top:2px;">
-                <button style="padding:2px 6px;font-size:10px;" onclick="editPurchaseInline('${p.id}')">Editar</button>
-                <button class="danger" style="padding:2px 6px;font-size:10px;" onclick="removePurchase('${p.id}')">Excluir</button>
-              </div>
-            </div>
-          </div>`;
-        }).join('');
-
-        return `<div class="card-accordion">
-          <div class="card-accordion-header" onclick="toggleAccordion('${accordionId}')">
-            <div class="card-accordion-left">
-              <span style="font-size:13px;font-weight:600;">${cardName}</span>
-              <span style="font-size:11px;color:var(--muted);">${items.length} lançamento${items.length !== 1 ? 's' : ''}</span>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation()">
-              <strong style="font-size:14px;">${brl(total)}</strong>
-              <button class="danger btn-sm" onclick="deleteCardInvoice('${cardName}')" style="font-size:11px;padding:3px 8px;">&#128465; Excluir fatura</button>
-              <span class="card-accordion-arrow" id="arrow-${accordionId}" onclick="toggleAccordion('${accordionId}');event.stopPropagation()">▼</span>
-            </div>
+            <div style="font-size:13px;font-weight:600;">${cardName}</div>
+            <div style="font-size:11px;color:var(--muted);">${items.length} lançamento${items.length !== 1 ? 's' : ''} · ${payDate ? formatDate(payDate) : '—'}</div>
           </div>
-          <div class="card-accordion-body" id="${accordionId}">${itemsHtml}</div>
+          <strong style="font-size:14px;flex-shrink:0;">${brl(total)}</strong>
         </div>`;
       }).join('');
 
@@ -1628,14 +1616,14 @@
                 ${extraBadges}
               </div>
               <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.description}</div>
-              <div style="font-size:11px;color:var(--muted);">${!isEntrada ? `${p.category} · ` : ''}${p.account}${!isEntrada && p.installments > 1 ? ` · ${currentInstallment}/${p.installments}` : ''} · ${dateInfo}</div>
+              <div style="font-size:11px;color:var(--muted);">${p.account}${!isEntrada && p.installments > 1 ? ` · ${currentInstallment}/${p.installments}` : ''} · ${dateInfo}</div>
             </div>
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">
               <strong style="font-size:14px;">${brl(amount)}</strong>
               <div style="display:flex;gap:4px;">
                 ${p.status === 'previsto'
-                  ? `<button class="ok" style="padding:3px 8px;font-size:11px;" onclick="markPurchaseStatus('${p.id}','efetivado')">Efetivar</button>`
-                  : `<button class="warn" style="padding:3px 8px;font-size:11px;" onclick="markPurchaseStatus('${p.id}','previsto')">Previsto</button>`}
+                  ? `<button class="ok" style="padding:3px 8px;font-size:11px;" onclick="markPurchaseStatus(this.dataset.id,'efetivado')" data-id="${p.id}">Efetivar</button>`
+                  : `<button class="warn" style="padding:3px 8px;font-size:11px;" onclick="markPurchaseStatus(this.dataset.id,'previsto')" data-id="${p.id}">Previsto</button>`}
                 <button style="padding:3px 8px;font-size:11px;" onclick="editPurchaseInline('${p.id}')">Editar</button>
                 <button class="danger" style="padding:3px 8px;font-size:11px;" onclick="removePurchase('${p.id}')">Excluir</button>
               </div>
@@ -1667,14 +1655,26 @@
             </div>
             <div>
               ${items.length ? items.map(item => `
-                <div class="invoice-row">
-                  <div>
-                    <div><strong>${item.description}</strong></div>
-                    <div class="small">Compra: ${formatDate(item.purchaseDate)} • Pagamento: ${formatDate(item.paymentDate)}</div>
-                    <div class="small">${statusBadge(item.status)} ${item.isRecurring ? '<span class="badge badge-pending">Recorrente</span>' : ''}</div>
+                <div class="invoice-row" id="prow-${item.sourceId}" style="align-items:flex-start;padding:10px 0;">
+                  <div style="flex:1;min-width:0;">
+                    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
+                      ${statusBadge(item.status)}
+                      <span style="${TAG_STYLE}background:${{'Essenciais':'rgba(59,130,246,.15)','Fixos':'rgba(168,85,247,.15)','Variáveis':'rgba(249,115,22,.15)','Estratégico':'rgba(16,185,129,.15)'}[item.block]||'rgba(255,255,255,.08)'};color:${{'Essenciais':'#3b82f6','Fixos':'#a855f7','Variáveis':'#f97316','Estratégico':'#10b981'}[item.block]||'var(--muted)'};border:1px solid transparent;">${item.block||'—'}</span>
+                      ${item.isRecurring ? `<span style="${TAG_STYLE}background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.35);">Recorrente</span>` : ''}
+
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+                      <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${item.description}</span>
+                      ${item.installments > 1 ? `<span style="font-size:11px;color:var(--muted);white-space:nowrap;flex-shrink:0;">${item.installmentNumber}/${item.installments}</span>` : ''}
+                    </div>
+                    <div class="small" style="margin-top:2px;">Compra: ${formatDate(item.purchaseDate)}</div>
                   </div>
-                  <div class="row-actions">
-                    <strong>${brl(item.amount)}</strong>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;padding-left:10px;">
+                    <strong style="font-size:14px;">${brl(item.amount)}</strong>
+                    <div style="display:flex;gap:4px;">
+                      <button style="padding:3px 8px;font-size:11px;" onclick="editPurchaseInline('${item.sourceId}')">Editar</button>
+                      <button class="danger" style="padding:3px 8px;font-size:11px;" onclick="removePurchase('${item.sourceId}')">Excluir</button>
+                    </div>
                   </div>
                 </div>
               `).join('') : '<div class="small">Nenhum item desta fatura neste mês.</div>'}
@@ -2746,14 +2746,19 @@
 
     // ===== INLINE EDIT =====
     function editPurchaseInline(id) {
+      console.log('editPurchaseInline called with id:', id);
       // Remove any existing inline form
       document.querySelectorAll('.inline-edit-form').forEach(el => el.remove());
 
       const purchase = data.purchases.find(p => p.id === id);
+      console.log('purchase found:', !!purchase);
       if (!purchase) return;
 
       const row = document.getElementById('prow-' + id);
       if (!row) { editPurchase(id); return; }
+      // If inside accordion, insert form after the whole accordion card
+      const accCard = row.closest('.card-accordion');
+      const insertTarget = accCard || row;
 
       const isEntrada = purchase.block === 'Entrada';
       const accountOptions = [
@@ -2789,7 +2794,7 @@
           <button onclick="this.closest('.inline-edit-form').remove()">Cancelar</button>
           <button class="primary" onclick="saveInlineEdit('${id}')">Salvar</button>
         </div>`;
-      row.insertAdjacentElement('afterend', form);
+      insertTarget.insertAdjacentElement('afterend', form);
       form.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
