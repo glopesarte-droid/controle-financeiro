@@ -2029,24 +2029,77 @@
     function markPurchaseStatus(id, status) {
       const purchase = data.purchases.find(p => p.id === id);
       if (!purchase || purchase.status === status) return;
+      // Card items need account selection to deduct balance
+      if (purchase.isCard && status === 'efetivado') {
+        const total = Number(purchase.totalValue);
+        _pendingCardPayment = { cardName: purchase.account, status, items: [purchase], singleItem: true };
+        const sel = document.getElementById('cardPaymentAccount');
+        sel.innerHTML = data.accounts.map(a => `<option value="${a.id}">${a.name} (${brl(a.balance)})</option>`).join('');
+        document.getElementById('cardPaymentSubtitle').textContent = `${purchase.description} · ${brl(total)}`;
+        document.getElementById('cardPaymentOverlay').style.display = 'flex';
+        return;
+      }
       applyPurchaseBalanceImpact(purchase, -1);
       purchase.status = status;
       applyPurchaseBalanceImpact(purchase, 1);
       render();
+      save();
     }
 
+    let _pendingCardPayment = null;
+
     function markAllCard(cardName, status) {
-      data.purchases.forEach(p => {
-        if (p.account !== cardName || p.status === status) return;
-        const base = normalizeToMonth(p.paymentDate || p.date);
-        const end = p.isRecurring && p.recurringEndDate ? normalizeToMonth(p.recurringEndDate) : new Date(base.getFullYear(), base.getMonth() + Math.max(0, (p.installments || 1) - 1), 1);
-        const current = new Date(data.currentYear, data.currentMonth, 1);
-        if (base <= current && end >= current) {
-          applyPurchaseBalanceImpact(p, -1);
-          p.status = status;
-          applyPurchaseBalanceImpact(p, 1);
-        }
-      });
+      if (status === 'efetivado') {
+        // Show account selection modal
+        const items = data.purchases.filter(p => {
+          if (p.account !== cardName || p.status === 'efetivado') return false;
+          const base = normalizeToMonth(p.paymentDate || p.date);
+          const end = p.isRecurring && p.recurringEndDate ? normalizeToMonth(p.recurringEndDate) : new Date(base.getFullYear(), base.getMonth() + Math.max(0, (p.installments || 1) - 1), 1);
+          const current = new Date(data.currentYear, data.currentMonth, 1);
+          return base <= current && end >= current;
+        });
+        if (!items.length) { alert('Todos os lançamentos já estão efetivados.'); return; }
+        const total = items.reduce((s, p) => s + Number(p.totalValue), 0);
+        _pendingCardPayment = { cardName, status, items };
+        // Populate account dropdown
+        const sel = document.getElementById('cardPaymentAccount');
+        sel.innerHTML = data.accounts.map(a => `<option value="${a.id}">${a.name} (${brl(a.balance)})</option>`).join('');
+        document.getElementById('cardPaymentSubtitle').textContent = `${cardName} · ${items.length} lançamentos · ${brl(total)}`;
+        document.getElementById('cardPaymentOverlay').style.display = 'flex';
+      } else {
+        // Mark as previsto directly
+        data.purchases.forEach(p => {
+          if (p.account !== cardName || p.status === status) return;
+          const base = normalizeToMonth(p.paymentDate || p.date);
+          const end = p.isRecurring && p.recurringEndDate ? normalizeToMonth(p.recurringEndDate) : new Date(base.getFullYear(), base.getMonth() + Math.max(0, (p.installments || 1) - 1), 1);
+          const current = new Date(data.currentYear, data.currentMonth, 1);
+          if (base <= current && end >= current) {
+            applyPurchaseBalanceImpact(p, -1);
+            p.status = status;
+            applyPurchaseBalanceImpact(p, 1);
+          }
+        });
+        render();
+      }
+    }
+
+    function closeCardPaymentModal() {
+      document.getElementById('cardPaymentOverlay').style.display = 'none';
+      _pendingCardPayment = null;
+    }
+
+    function confirmCardPayment() {
+      if (!_pendingCardPayment) return;
+      const accId = document.getElementById('cardPaymentAccount').value;
+      const acc = data.accounts.find(a => a.id === accId);
+      if (!acc) { alert('Selecione uma conta.'); return; }
+      const total = _pendingCardPayment.items.reduce((s, p) => s + Number(p.totalValue), 0);
+      // Deduct total from selected account
+      acc.balance = Number(acc.balance || 0) - total;
+      // Mark all as efetivado
+      _pendingCardPayment.items.forEach(p => { p.status = 'efetivado'; });
+      closeCardPaymentModal();
+      save();
       render();
     }
 
@@ -2848,9 +2901,27 @@
     window.toggleHelp = toggleHelp;
     window.markPurchaseStatus = markPurchaseStatus;
     window.markAllCard = markAllCard;
+    window.closeCardPaymentModal = closeCardPaymentModal;
+    window.confirmCardPayment = confirmCardPayment;
 
     render();
   </script>
+
+  <!-- Card Payment Modal -->
+  <div id="cardPaymentOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center;">
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:24px;width:100%;max-width:420px;margin:16px;">
+      <div style="font-size:16px;font-weight:700;margin-bottom:6px;">Efetivar fatura</div>
+      <div id="cardPaymentSubtitle" style="font-size:13px;color:var(--muted);margin-bottom:16px;"></div>
+      <div class="field" style="margin-bottom:16px;">
+        <label>Conta de pagamento</label>
+        <select id="cardPaymentAccount" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:10px;background:var(--card-2);color:var(--text);"></select>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button onclick="closeCardPaymentModal()" style="flex:1;padding:10px;">Cancelar</button>
+        <button class="primary" onclick="confirmCardPayment()" style="flex:2;padding:10px;">Confirmar</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Firebase SDK -->
   <script type="module">
