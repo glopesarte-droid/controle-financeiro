@@ -511,8 +511,8 @@
     .form-value-display .currency-symbol{font-size:20px;color:var(--muted);margin-right:4px}
     .block-chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
     .block-chip{padding:6px 12px;border-radius:99px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--card-2);color:var(--muted);font-family:inherit;transition:all .15s}
-    .block-chip.sel-Essenciais{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.5);color:var(--essenciais)}
-    .block-chip.sel-Fixos{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.5);color:var(--fixos)}
+    .block-chip.sel-Essencial{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.5);color:var(--essenciais)}
+    .block-chip.sel-Variavel{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.5);color:var(--fixos)}
     .block-chip.sel-Variaveis{background:rgba(249,115,22,.15);border-color:rgba(249,115,22,.5);color:var(--variaveis)}
     .block-chip.sel-Estrategico{background:rgba(16,185,129,.15);border-color:rgba(16,185,129,.5);color:var(--estrategico)}
     .form-nav-btns{display:flex;gap:8px;margin-top:14px}
@@ -744,7 +744,7 @@
       <div class="toolbar">
         <div class="section-title" style="margin-bottom:0;">Blocos</div>
       </div>
-      <div class="grid grid-4" id="blocksGrid"></div>
+      <div class="grid grid-3" id="blocksGrid"></div>
       <div id="blockDetail" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);"></div>
     </div>
 
@@ -776,20 +776,16 @@
                 <input id="monthlyLimit" type="number" step="0.01" placeholder="0,00" />
               </div>
               <div class="field">
-                <label>Essenciais</label>
-                <input id="limitEssenciais" type="number" step="0.01" />
+                <label>Essencial</label>
+                <input id="limitEssencial" type="number" step="0.01" />
               </div>
               <div class="field">
-                <label>Fixos</label>
-                <input id="limitFixos" type="number" step="0.01" />
+                <label>Variável</label>
+                <input id="limitVariavel" type="number" step="0.01" />
               </div>
               <div class="field">
-                <label>Variáveis</label>
-                <input id="limitVariaveis" type="number" step="0.01" />
-              </div>
-              <div class="field">
-                <label>Estratégico</label>
-                <input id="limitEstrategico" type="number" step="0.01" />
+                <label>Investimento</label>
+                <input id="limitInvestimento" type="number" step="0.01" />
               </div>
               <div class="field save-limits-field" style="justify-content:end;">
                 <label>&nbsp;</label>
@@ -855,10 +851,9 @@
           <div class="field field-saida" style="margin-top:12px;">
             <label>Bloco</label>
             <div class="block-chip-row" id="blockChipRow">
-              <button type="button" class="block-chip" data-block="Essenciais" onclick="selectBlockChip('Essenciais')">Essenciais</button>
-              <button type="button" class="block-chip" data-block="Fixos" onclick="selectBlockChip('Fixos')">Fixos</button>
-              <button type="button" class="block-chip" data-block="Vari&#225;veis" onclick="selectBlockChip('Variáveis')">Vari&#225;veis</button>
-              <button type="button" class="block-chip" data-block="Estrat&#233;gico" onclick="selectBlockChip('Estratégico')">Estrat&#233;gico</button>
+              <button type="button" class="block-chip" data-block="Essencial" onclick="selectBlockChip('Essencial')">Essencial</button>
+              <button type="button" class="block-chip" data-block="Variável" onclick="selectBlockChip('Variável')">Variável</button>
+              <button type="button" class="block-chip" data-block="Investimento" onclick="selectBlockChip('Investimento')">Investimento</button>
             </div>
             <select id="expenseBlock" class="hidden"></select>
           </div>
@@ -924,8 +919,8 @@
   <script>
     const STORAGE_KEY = 'controle_financeiro_html_v8';
     const DATA_VERSION = 2;
-    const BLOCKS = ['Essenciais', 'Fixos', 'Variáveis', 'Estratégico'];
-    const CATEGORY_OPTIONS = ['MORADIA','MERCADO','ALIMENTACAO','TRANSPORTE','COMBUSTIVEL','CONTA_BASICA','CARRO','SAUDE','EDUCACAO','LAZER','ASSINATURAS','INVESTIMENTO','OUTROS'];
+    const BLOCKS = ['Essencial', 'Variável', 'Investimento'];
+    const CATEGORY_OPTIONS = ['MORADIA','MERCADO','SAUDE','EDUCACAO','TRANSPORTE','COMBUSTIVEL','CONTAS','ASSINATURAS','CORPO','ALIMENTACAO','CARRO','LAZER','VESTUARIO','OUTROS','INVESTIMENTO','DIVIDAS'];
     const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     let CARD_NAMES = [];
 
@@ -990,7 +985,7 @@
         purchaseDate: purchase.purchaseDate || purchase.date || new Date().toISOString().slice(0, 10),
         paymentDate: purchase.paymentDate || purchase.date || new Date().toISOString().slice(0, 10),
         account: purchase.account || 'Conta corrente',
-        block: purchase.block || (purchase.category === 'ENTRADA' ? 'Entrada' : 'Variáveis'),
+        block: purchase.block || (purchase.category === 'ENTRADA' ? 'Entrada' : 'Variável'),
         category: purchase.category || 'OUTROS',
         installments: Math.max(1, Number(purchase.installments || 1)),
         status: purchase.status || 'efetivado',
@@ -1006,8 +1001,8 @@
           total: Number(monthLimits.total || 0),
           Essenciais: Number(monthLimits.Essenciais || 0),
           Fixos: Number(monthLimits.Fixos || 0),
-          'Variáveis': Number(monthLimits['Variáveis'] || 0),
-          'Estratégico': Number(monthLimits['Estratégico'] || 0),
+          'Variável': Number(monthLimits['Variável'] || 0),
+          'Investimento': Number(monthLimits['Investimento'] || 0),
         };
       });
 
@@ -1072,7 +1067,7 @@
 
     function getLimits() {
       const key = getCurrentMonthKey();
-      return data.limitsByMonth[key] || { total: 0, Essenciais: 0, Fixos: 0, 'Variáveis': 0, 'Estratégico': 0 };
+      return data.limitsByMonth[key] || { total: 0, Essencial: 0, 'Variável': 0, Investimento: 0 };
     }
 
     function normalizeToMonth(dateStr) {
@@ -1225,10 +1220,10 @@
     function progressClass(percent) { if (percent >= 100) return 'status-danger'; if (percent >= 85) return 'status-warn'; return ''; }
 
     function blockClassName(block) {
-      return { 'Essenciais': 'block-essenciais', 'Fixos': 'block-fixos', 'Variáveis': 'block-variaveis', 'Estratégico': 'block-estrategico' }[block] || '';
+      return { 'Essenciais': 'block-essenciais', 'Fixos': 'block-fixos', 'Variáveis': 'block-variaveis', 'Investimento': 'block-estrategico' }[block] || '';
     }
     function chipClassName(block) {
-      return { 'Essenciais': 'chip-essenciais', 'Fixos': 'chip-fixos', 'Variáveis': 'chip-variaveis', 'Estratégico': 'chip-estrategico' }[block] || '';
+      return { 'Essencial': 'chip-essenciais', 'Essencial': 'chip-fixos', 'Variável': 'chip-variaveis', 'Investimento': 'chip-estrategico' }[block] || '';
     }
     function updateToggleIcon(buttonId, isOpen) { document.getElementById(buttonId).textContent = isOpen ? '▾' : '▸'; }
 
@@ -1304,7 +1299,7 @@
         const gastoTotal = efetivado + previsto;
         const saldoMes = baseBalance + entradas;
         const key = monthKey(data.currentYear, monthIndex);
-        const monthLimits = data.limitsByMonth[key] || { total: 0, Essenciais: 0, Fixos: 0, 'Variáveis': 0, 'Estratégico': 0 };
+        const monthLimits = data.limitsByMonth[key] || { total: 0, Essenciais: 0, Fixos: 0, 'Variável': 0, 'Investimento': 0 };
         return {
           monthIndex,
           name,
@@ -1337,7 +1332,7 @@
       const breakdown = annualBreakdown();
 
       const curMonth = data.currentMonth;
-      const BCOLS = {'Essenciais':'#3b82f6','Fixos':'#a855f7','Variáveis':'#f97316','Estratégico':'#10b981'};
+      const BCOLS = {'Essencial':'#3b82f6','Variável':'#f97316','Investimento':'#10b981'};
       document.getElementById('annualHighlights').innerHTML = breakdown.map(row => {
         const saidas = row.efetivado + row.previsto;
         const saldo = row.entradas - saidas;
@@ -1433,10 +1428,12 @@
       const limits = getLimits();
       const today = new Date().toISOString().slice(0,10);
       document.getElementById('monthlyLimit').value = limits.total || '';
-      document.getElementById('limitEssenciais').value = limits['Essenciais'] || '';
-      document.getElementById('limitFixos').value = limits['Fixos'] || '';
-      document.getElementById('limitVariaveis').value = limits['Variáveis'] || '';
-      document.getElementById('limitEstrategico').value = limits['Estratégico'] || '';
+      const leEl = document.getElementById('limitEssencial');
+      const lvEl = document.getElementById('limitVariavel');
+      const liEl = document.getElementById('limitInvestimento');
+      if (leEl) leEl.value = limits['Essencial'] || '';
+      if (lvEl) lvEl.value = limits['Variável'] || '';
+      if (liEl) liEl.value = limits['Investimento'] || '';
       if (!document.getElementById('expenseDate').value) document.getElementById('expenseDate').value = today;
       if (!document.getElementById('expensePurchaseDate').value) document.getElementById('expensePurchaseDate').value = today;
       if (!document.getElementById('expensePaymentDate').value) document.getElementById('expensePaymentDate').value = today;
@@ -1448,10 +1445,9 @@
       const limits = getLimits();
       const totals = totalsByBlock();
       const helpByBlock = {
-        'Essenciais': 'Gastos básicos do mês.',
-        'Fixos': 'Despesas recorrentes e previsíveis.',
-        'Variáveis': 'Gastos que mudam ao longo do mês.',
-        'Estratégico': 'Reserva, investimento e compras planejadas.'
+        'Essencial': 'Gastos necessários: moradia, mercado, saúde, educação, contas.',
+        'Variável': 'Gastos opcionais: alimentação fora, lazer, vestuário.',
+        'Investimento': 'Investimentos, dívidas e metas financeiras.'
       };
       document.getElementById('blocksGrid').innerHTML = BLOCKS.map(block => {
         const previsto = totals[block]?.previsto || 0;
@@ -1624,7 +1620,7 @@
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:2px;">
                 <span class="type-badge ${isEntrada ? 'entrada' : 'saida'}" style="flex-shrink:0;">${isEntrada ? 'ENTRADA' : 'SAÍDA'}</span>
                 ${statusBadge(p.status)}
-                ${!isEntrada ? `<span style="${TAG_STYLE}background:${{'Essenciais':'rgba(59,130,246,.15)','Fixos':'rgba(168,85,247,.15)','Variáveis':'rgba(249,115,22,.15)','Estratégico':'rgba(16,185,129,.15)'}[p.block]||'rgba(255,255,255,.08)'};color:${{'Essenciais':'#3b82f6','Fixos':'#a855f7','Variáveis':'#f97316','Estratégico':'#10b981'}[p.block]||'var(--muted)'};border:1px solid transparent;">${p.block}</span>` : ''}
+                ${!isEntrada ? `<span style="${TAG_STYLE}background:${{'Essencial':'rgba(59,130,246,.15)','Variável':'rgba(249,115,22,.15)','Investimento':'rgba(16,185,129,.15)'}[p.block]||'rgba(255,255,255,.08)'};color:${{'Essencial':'#3b82f6','Variável':'#f97316','Investimento':'#10b981'}[p.block]||'var(--muted)'};border:1px solid transparent;">${p.block}</span>` : ''}
                 ${extraBadges}
               </div>
               <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.description}</div>
@@ -1671,7 +1667,7 @@
                   <div style="flex:1;min-width:0;">
                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
                       ${statusBadge(item.status)}
-                      <span style="${TAG_STYLE}background:${{'Essenciais':'rgba(59,130,246,.15)','Fixos':'rgba(168,85,247,.15)','Variáveis':'rgba(249,115,22,.15)','Estratégico':'rgba(16,185,129,.15)'}[item.block]||'rgba(255,255,255,.08)'};color:${{'Essenciais':'#3b82f6','Fixos':'#a855f7','Variáveis':'#f97316','Estratégico':'#10b981'}[item.block]||'var(--muted)'};border:1px solid transparent;">${item.block||'—'}</span>
+                      <span style="${TAG_STYLE}background:${{'Essencial':'rgba(59,130,246,.15)','Variável':'rgba(249,115,22,.15)','Investimento':'rgba(16,185,129,.15)'}[item.block]||'rgba(255,255,255,.08)'};color:${{'Essencial':'#3b82f6','Variável':'#f97316','Investimento':'#10b981'}[item.block]||'var(--muted)'};border:1px solid transparent;">${item.block||'—'}</span>
                       ${item.isRecurring ? `<span style="${TAG_STYLE}background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.35);">Recorrente</span>` : ''}
 
                     </div>
@@ -1734,19 +1730,19 @@
 
     function autoBlockByCategory(category) {
       const map = {
-        MORADIA: 'Essenciais',
-        MERCADO: 'Essenciais',
-        SAUDE: 'Essenciais',
-        EDUCACAO: 'Essenciais',
-        TRANSPORTE: 'Variáveis',
-        CARRO: 'Fixos',
-        ALIMENTACAO: 'Variáveis',
-        LAZER: 'Variáveis',
-        ASSINATURAS: 'Fixos',
-        INVESTIMENTO: 'Estratégico',
-        OUTROS: 'Variáveis'
+        MORADIA: 'Essencial',
+        MERCADO: 'Essencial',
+        SAUDE: 'Essencial',
+        EDUCACAO: 'Essencial',
+        TRANSPORTE: 'Variável',
+        CARRO: 'Essencial',
+        ALIMENTACAO: 'Variável',
+        LAZER: 'Variável',
+        ASSINATURAS: 'Essencial',
+        INVESTIMENTO: 'Investimento',
+        OUTROS: 'Variável'
       };
-      return map[category] || 'Variáveis';
+      return map[category] || 'Variável';
     }
 
     function isCardAccount(accountVal) {
@@ -1866,10 +1862,9 @@
       const key = getCurrentMonthKey();
       data.limitsByMonth[key] = {
         total: Number(document.getElementById('monthlyLimit').value || 0),
-        Essenciais: Number(document.getElementById('limitEssenciais').value || 0),
-        Fixos: Number(document.getElementById('limitFixos').value || 0),
-        'Variáveis': Number(document.getElementById('limitVariaveis').value || 0),
-        'Estratégico': Number(document.getElementById('limitEstrategico').value || 0),
+        Essencial: Number(document.getElementById('limitEssencial').value || 0),
+        'Variável': Number(document.getElementById('limitVariavel').value || 0),
+        Investimento: Number(document.getElementById('limitInvestimento').value || 0),
       };
       render();
     }
@@ -2274,7 +2269,7 @@
       const canvas = document.getElementById('donutCanvas');
       if (!canvas) return;
       const totals = totalsByBlock();
-      const BCOLORS = {'Essenciais':'#3b82f6','Fixos':'#a855f7','Vari\u00e1veis':'#f97316','Estrat\u00e9gico':'#10b981'};
+      const BCOLORS = {'Essencial':'#3b82f6','Essencial':'#a855f7','Vari\u00e1veis':'#f97316','Estrat\u00e9gico':'#10b981'};
       const vals = BLOCKS.map(b=>(totals[b]?.previsto||0)+(totals[b]?.efetivado||0));
       const total = vals.reduce((s,v)=>s+v,0);
       const cv = document.getElementById('donutCenterVal');
@@ -2302,9 +2297,11 @@
 
     // ===== RECENT TXN =====
     const TXN_ICONS={
-      MERCADO:'🛒', ALIMENTACAO:'🍽️', TRANSPORTE:'🚌', SAUDE:'💊',
-      EDUCACAO:'📚', LAZER:'🎬', ASSINATURAS:'📱', INVESTIMENTO:'📈',
-      MORADIA:'🏠', CARRO:'🚗', OUTROS:'💳', ENTRADA:'💰'
+      MORADIA:'🏠', MERCADO:'🛒', SAUDE:'💊', EDUCACAO:'📚',
+      TRANSPORTE:'🚌', COMBUSTIVEL:'⛽', CONTAS:'💡', ASSINATURAS:'📱',
+      CORPO:'💪', ALIMENTACAO:'🍽️', CARRO:'🚗', LAZER:'🎬',
+      VESTUARIO:'👕', OUTROS:'💳', INVESTIMENTO:'📈', DIVIDAS:'📋',
+      ENTRADA:'💰'
     };
     function renderRecentTxn() {
       const el = document.getElementById('recentTxnList');
@@ -2455,27 +2452,27 @@
     // ===== CSV IMPORT =====
     // Category to block mapping (used for block auto-suggestion)
     const C6_CAT_MAP = {
-      'Supermercados / Mercearia / Padarias / Lojas de Conveniência': 'Essenciais',
-      'Assistência médica e odontológica': 'Essenciais',
-      'Educacional': 'Essenciais',
-      'Restaurante / Lanchonete / Bar': 'Variáveis',
-      'Entretenimento': 'Variáveis',
-      'Vestuário / Roupas': 'Variáveis',
-      'Departamento / Desconto': 'Variáveis',
-      'Especialidade varejo': 'Variáveis',
-      'Casa / Escritório Mobiliário': 'Variáveis',
-      'Construção': 'Variáveis',
-      'Elétrico': 'Variáveis',
-      'Automotivo': 'Fixos',
-      'Relacionados a Automotivo': 'Fixos',
-      'Serviços de telecomunicações': 'Fixos',
-      'Serviços pessoais': 'Fixos',
-      'Limpeza / Lavanderia': 'Fixos',
-      'Seguro': 'Fixos',
-      'Serviços Profissionais': 'Estratégico',
-      'Associação': 'Estratégico',
-      'Marketing Direto': 'Variáveis',
-      'Empresa para empresa': 'Estratégico',
+      'Supermercados / Mercearia / Padarias / Lojas de Conveniência': 'Essencial',
+      'Assistência médica e odontológica': 'Essencial',
+      'Educacional': 'Essencial',
+      'Restaurante / Lanchonete / Bar': 'Variável',
+      'Entretenimento': 'Variável',
+      'Vestuário / Roupas': 'Variável',
+      'Departamento / Desconto': 'Variável',
+      'Especialidade varejo': 'Variável',
+      'Casa / Escritório Mobiliário': 'Variável',
+      'Construção': 'Variável',
+      'Elétrico': 'Variável',
+      'Automotivo': 'Essencial',
+      'Relacionados a Automotivo': 'Essencial',
+      'Serviços de telecomunicações': 'Essencial',
+      'Serviços pessoais': 'Essencial',
+      'Limpeza / Lavanderia': 'Essencial',
+      'Seguro': 'Essencial',
+      'Serviços Profissionais': 'Investimento',
+      'Associação': 'Investimento',
+      'Marketing Direto': 'Variável',
+      'Empresa para empresa': 'Investimento',
     };
 
     let importRows = [];
@@ -2591,7 +2588,7 @@
         const dateRaw = cols[iDate]?.trim() || '';
         const parcRaw = iParc >= 0 ? (cols[iParc]?.trim() || '1/1') : '1/1';
         const parcTotal = parseInt(parcRaw.split('/')[1]) || 1;
-        const block = C6_CAT_MAP[cat] || 'Variáveis';
+        const block = C6_CAT_MAP[cat] || 'Variável';
         importRows.push({ desc, date: dateRaw, val, cat, block, parcTotal, include: true, id: crypto.randomUUID() });
       }
       if (!importRows.length) { alert('Nenhuma transação encontrada. Verifique o mapeamento das colunas.'); return; }
@@ -2615,7 +2612,7 @@
           <td style="white-space:nowrap;font-weight:600;">${brl(row.val)}</td>
           <td>
             <select class="ibl-sel" data-i="${i}" onchange="importRows[${i}].block=this.value;updateImportSummary()">
-              ${['Essenciais','Fixos','Variáveis','Estratégico'].map(b=>`<option value="${b}" ${b===row.block?'selected':''}>${b}</option>`).join('')}
+              ${['Essencial','Essencial','Variável','Investimento'].map(b=>`<option value="${b}" ${b===row.block?'selected':''}>${b}</option>`).join('')}
             </select>
           </td>
           <td>
@@ -2835,7 +2832,7 @@
         ...data.accounts.map(a => `<option value="conta:${a.id}" ${purchase.account === a.name ? 'selected' : ''}>${a.name}</option>`),
         ...(data.cards||[]).map(cd => `<option value="cartao:${cd.id}" ${purchase.account === cd.name ? 'selected' : ''}>${cd.name}</option>`)
       ].join('');
-      const blockOptions = ['Essenciais','Fixos','Variáveis','Estratégico'].map(b =>
+      const blockOptions = ['Essencial','Variável','Investimento'].map(b =>
         `<option value="${b}" ${purchase.block === b ? 'selected' : ''}>${b}</option>`).join('');
       const catOptions = CATEGORY_OPTIONS.map(cat =>
         `<option value="${cat}" ${purchase.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
@@ -3109,8 +3106,8 @@
               <select id="importDefaultBlock" class="ibl-sel" style="width:100%;padding:8px 10px;font-size:13px;" onchange="applyDefaultBlock()">
                 <option value="Essenciais">Essenciais</option>
                 <option value="Fixos">Fixos</option>
-                <option value="Variáveis" selected>Variáveis</option>
-                <option value="Estratégico">Estratégico</option>
+                <option value="Variável" selected>Variáveis</option>
+                <option value="Investimento">Estratégico</option>
               </select>
             </div>
           </div>
