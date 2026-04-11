@@ -925,7 +925,7 @@
     const STORAGE_KEY = 'controle_financeiro_html_v8';
     const DATA_VERSION = 2;
     const BLOCKS = ['Essenciais', 'Fixos', 'Variáveis', 'Estratégico'];
-    const CATEGORY_OPTIONS = ['MORADIA','MERCADO','ALIMENTACAO','TRANSPORTE','CARRO','SAUDE','EDUCACAO','LAZER','ASSINATURAS','INVESTIMENTO','OUTROS'];
+    const CATEGORY_OPTIONS = ['MORADIA','MERCADO','ALIMENTACAO','TRANSPORTE','COMBUSTIVEL','CONTA_BASICA','CARRO','SAUDE','EDUCACAO','LAZER','ASSINATURAS','INVESTIMENTO','OUTROS'];
     const MONTHS = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
     let CARD_NAMES = [];
 
@@ -1469,6 +1469,7 @@
               </div>
               <span class="badge">${percent}%</span>
             </div>
+            <div class="small">Limite: ${brl(limit)}</div>
             <div class="small">Efetivado: ${brl(efetivado)}</div>
             <div class="small">Previsto: ${brl(previsto)}</div>
             <div class="small">Restante: ${brl(remain)}</div>
@@ -1496,21 +1497,36 @@
       const limits = getLimits();
       const previsto = rows.filter(r=>r.status==='previsto').reduce((s,r)=>s+r.amount,0);
       const efetivado = rows.filter(r=>r.status==='efetivado').reduce((s,r)=>s+r.amount,0);
+      const selCat = data.selectedCategory;
+      const filteredRows = selCat ? rows.filter(r => r.category === selCat) : [];
       target.innerHTML = `
-        <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px;">
-          <div>
-            <h3 class="${chipClassName(data.selectedBlock)}">${data.selectedBlock}</h3>
-            <div class="small">Limite: ${brl(limits[data.selectedBlock] || 0)} • Efetivado: ${brl(efetivado)} • Previsto: ${brl(previsto)}</div>
-          </div>
+        <div style="margin-bottom:12px;">
+          <h3 class="${chipClassName(data.selectedBlock)}" style="margin-bottom:4px;">${data.selectedBlock}</h3>
+          <div class="small">Limite: ${brl(limits[data.selectedBlock] || 0)} • Efetivado: ${brl(efetivado)} • Previsto: ${brl(previsto)}</div>
         </div>
         <div class="grid grid-2">
           <div>
-            <div class="section-title" style="font-size:16px;">Categorias</div>
-            ${cats.length ? cats.map(([name,val]) => `<div class="list-row"><div><span>${name}</span><div class="small">Efetivado ${brl(val.efetivado)} • Previsto ${brl(val.previsto)}</div></div><strong>${brl(val.previsto + val.efetivado)}</strong></div>`).join('') : '<div class="small">Sem gastos neste bloco.</div>'}
+            <div class="section-title" style="font-size:14px;margin-bottom:8px;">Categorias</div>
+            ${cats.length ? cats.map(([name,val]) => `
+              <div class="list-row" style="cursor:pointer;${selCat===name ? 'background:var(--card-2);border-radius:8px;padding:6px 8px;margin:0 -8px;' : ''}" onclick="selectCategory('${name}')">
+                <div>
+                  <span style="font-weight:${selCat===name?'700':'400'};">${name}</span>
+                  <div class="small">Efetivado ${brl(val.efetivado)} • Previsto ${brl(val.previsto)}</div>
+                </div>
+                <strong>${brl(val.previsto + val.efetivado)}</strong>
+              </div>`).join('') : '<div class="small">Sem gastos neste bloco.</div>'}
           </div>
           <div>
-            <div class="section-title" style="font-size:16px;">Lançamentos</div>
-            ${rows.length ? rows.map(r => `<div class="list-row"><div><strong>${r.description}</strong><div class="small">${r.category} • ${statusBadge(r.status)} ${r.isRecurring ? '• Recorrente' : ''} ${r.installments > 1 ? `• ${r.installmentNumber}/${r.installments}` : ''}</div></div><strong>${brl(r.amount)}</strong></div>`).join('') : '<div class="small">Sem lançamentos.</div>'}
+            <div class="section-title" style="font-size:14px;margin-bottom:8px;">${selCat ? `Lançamentos — ${selCat}` : 'Lançamentos'}</div>
+            ${!selCat ? '<div class="small" style="color:var(--muted);">Selecione uma categoria para ver os lançamentos.</div>' :
+              filteredRows.length ? filteredRows.map(r => `
+                <div class="list-row">
+                  <div>
+                    <strong style="font-size:13px;">${r.description}</strong>
+                    <div class="small">${statusBadge(r.status)}${r.installments > 1 ? ` • ${r.installmentNumber}/${r.installments}` : ''}</div>
+                  </div>
+                  <strong>${brl(r.amount)}</strong>
+                </div>`).join('') : '<div class="small">Sem lançamentos nesta categoria.</div>'}
           </div>
         </div>
       `;
@@ -1993,8 +2009,14 @@
 
     function selectBlock(block) {
       data.selectedBlock = data.selectedBlock === block ? null : block;
+      data.selectedCategory = null;
       render();
       save();
+    }
+
+    function selectCategory(cat) {
+      data.selectedCategory = data.selectedCategory === cat ? null : cat;
+      renderBlockDetail();
     }
 
     function exportBackup() {
@@ -2815,7 +2837,7 @@
       ].join('');
       const blockOptions = ['Essenciais','Fixos','Variáveis','Estratégico'].map(b =>
         `<option value="${b}" ${purchase.block === b ? 'selected' : ''}>${b}</option>`).join('');
-      const catOptions = ['MORADIA','MERCADO','ALIMENTACAO','TRANSPORTE','CARRO','SAUDE','EDUCACAO','LAZER','ASSINATURAS','INVESTIMENTO','OUTROS'].map(cat =>
+      const catOptions = CATEGORY_OPTIONS.map(cat =>
         `<option value="${cat}" ${purchase.category === cat ? 'selected' : ''}>${cat}</option>`).join('');
 
       const form = document.createElement('div');
@@ -2898,6 +2920,7 @@
     window.removePurchase = removePurchase;
     window.editPurchase = editPurchase;
     window.selectBlock = selectBlock;
+    window.selectCategory = selectCategory;
     window.toggleHelp = toggleHelp;
     window.markPurchaseStatus = markPurchaseStatus;
     window.markAllCard = markAllCard;
