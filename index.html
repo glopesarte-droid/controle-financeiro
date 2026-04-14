@@ -1152,6 +1152,8 @@
           const baseMonth = normalizeToMonth(purchase.paymentDate || purchase.date);
           for (let i = 0; i < purchase.installments; i++) {
             const current = new Date(baseMonth.getFullYear(), baseMonth.getMonth() + i, 1);
+            const mKey = current.getFullYear() + '-' + current.getMonth();
+            const mStatus = (purchase.statusByMonth && purchase.statusByMonth[mKey]) || 'previsto';
             entries.push({
               sourceId: purchase.id,
               description: purchase.description,
@@ -1159,7 +1161,7 @@
               account: purchase.account,
               block: purchase.block,
               category: purchase.category,
-              status: purchase.status || 'efetivado',
+              status: mStatus,
               monthDate: current,
               paymentDate: current.toISOString().slice(0,10),
               purchaseDate: purchase.purchaseDate || purchase.date,
@@ -1598,6 +1600,7 @@
         if (p.isCard && p.block !== 'Entrada') return ''; // skip — already in accordion
         const isCard = CARD_NAMES.includes(p.account);
         const isEntrada = p.block === 'Entrada';
+        const currentStatus = getPurchaseStatusForMonth(p, data.currentYear, data.currentMonth);
         const current = new Date(data.currentYear, data.currentMonth, 1);
         const baseMonth = normalizeToMonth(p.paymentDate || p.date);
         const diffMonths = (current.getFullYear() - baseMonth.getFullYear()) * 12 + (current.getMonth() - baseMonth.getMonth());
@@ -1619,7 +1622,7 @@
             <div style="flex:1;min-width:0;">
               <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:2px;">
                 <span class="type-badge ${isEntrada ? 'entrada' : 'saida'}" style="flex-shrink:0;">${isEntrada ? 'ENTRADA' : 'SAÍDA'}</span>
-                ${statusBadge(p.status)}
+                ${statusBadge(currentStatus)}
                 ${!isEntrada ? `<span style="${TAG_STYLE}background:${{'Essencial':'rgba(59,130,246,.15)','Variável':'rgba(249,115,22,.15)','Investimento':'rgba(16,185,129,.15)'}[p.block]||'rgba(255,255,255,.08)'};color:${{'Essencial':'#3b82f6','Variável':'#f97316','Investimento':'#10b981'}[p.block]||'var(--muted)'};border:1px solid transparent;">${p.block}</span>` : ''}
                 ${extraBadges}
               </div>
@@ -1666,7 +1669,7 @@
                 <div class="invoice-row" id="prow-${item.sourceId}" style="align-items:flex-start;padding:10px 0;">
                   <div style="flex:1;min-width:0;">
                     <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px;">
-                      ${statusBadge(item.status)}
+                      ${statusBadge(getPurchaseStatusForMonth({status: item.status, statusByMonth: data.purchases.find(p=>p.id===item.sourceId)?.statusByMonth, isRecurring: item.isRecurring, installments: item.installments}, data.currentYear, data.currentMonth))}
                       <span style="${TAG_STYLE}background:${{'Essencial':'rgba(59,130,246,.15)','Variável':'rgba(249,115,22,.15)','Investimento':'rgba(16,185,129,.15)'}[item.block]||'rgba(255,255,255,.08)'};color:${{'Essencial':'#3b82f6','Variável':'#f97316','Investimento':'#10b981'}[item.block]||'var(--muted)'};border:1px solid transparent;">${item.block||'—'}</span>
                       ${item.isRecurring ? `<span style="${TAG_STYLE}background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.35);">Recorrente</span>` : ''}
 
@@ -2043,9 +2046,34 @@
       return d.toLocaleDateString('pt-BR');
     }
 
+    function getMonthKey(year, month) { return year + '-' + month; }
+
+    function getPurchaseStatusForMonth(p, year, month) {
+      const isMultiMonth = p.isRecurring || (p.installments || 1) > 1;
+      if (!isMultiMonth) return p.status || 'previsto';
+      const mKey = getMonthKey(year, month);
+      return (p.statusByMonth && p.statusByMonth[mKey]) || 'previsto';
+    }
+
     function markPurchaseStatus(id, status) {
       const purchase = data.purchases.find(p => p.id === id);
-      if (!purchase || purchase.status === status) return;
+      if (!purchase) return;
+      const isMultiMonth = purchase.isRecurring || (purchase.installments || 1) > 1;
+      // For single-month purchases, use simple status
+      if (!isMultiMonth) {
+        if (purchase.status === status) return;
+        applyPurchaseBalanceImpact(purchase, -1);
+        purchase.status = status;
+        applyPurchaseBalanceImpact(purchase, 1);
+        save(); render(); return;
+      }
+      // For recurring/installments, use statusByMonth
+      const mKey = getMonthKey(data.currentYear, data.currentMonth);
+      if (!purchase.statusByMonth) purchase.statusByMonth = {};
+      if (purchase.statusByMonth[mKey] === status) return;
+      purchase.statusByMonth[mKey] = status;
+      save(); render(); return;
+
       // Card items need account selection to deduct balance
       if (purchase.isCard && status === 'efetivado') {
         const total = Number(purchase.totalValue);
@@ -2084,16 +2112,21 @@
         document.getElementById('cardPaymentSubtitle').textContent = `${cardName} · ${items.length} lançamentos · ${brl(total)}`;
         document.getElementById('cardPaymentOverlay').style.display = 'flex';
       } else {
-        // Mark as previsto directly
+        // Mark current month as previsto
+        const mKey = getMonthKey(data.currentYear, data.currentMonth);
         data.purchases.forEach(p => {
-          if (p.account !== cardName || p.status === status) return;
+          if (p.account !== cardName) return;
           const base = normalizeToMonth(p.paymentDate || p.date);
           const end = p.isRecurring && p.recurringEndDate ? normalizeToMonth(p.recurringEndDate) : new Date(base.getFullYear(), base.getMonth() + Math.max(0, (p.installments || 1) - 1), 1);
           const current = new Date(data.currentYear, data.currentMonth, 1);
           if (base <= current && end >= current) {
-            applyPurchaseBalanceImpact(p, -1);
-            p.status = status;
-            applyPurchaseBalanceImpact(p, 1);
+            const isMultiMonth = p.isRecurring || (p.installments || 1) > 1;
+            if (isMultiMonth) {
+              if (!p.statusByMonth) p.statusByMonth = {};
+              p.statusByMonth[mKey] = 'previsto';
+            } else {
+              p.status = 'previsto';
+            }
           }
         });
         render();
@@ -2113,8 +2146,17 @@
       const total = _pendingCardPayment.items.reduce((s, p) => s + Number(p.totalValue), 0);
       // Deduct total from selected account
       acc.balance = Number(acc.balance || 0) - total;
-      // Mark all as efetivado
-      _pendingCardPayment.items.forEach(p => { p.status = 'efetivado'; });
+      // Mark current month as efetivado using statusByMonth
+      const mKey = getMonthKey(data.currentYear, data.currentMonth);
+      _pendingCardPayment.items.forEach(p => {
+        const isMultiMonth = p.isRecurring || (p.installments || 1) > 1;
+        if (isMultiMonth) {
+          if (!p.statusByMonth) p.statusByMonth = {};
+          p.statusByMonth[mKey] = 'efetivado';
+        } else {
+          p.status = 'efetivado';
+        }
+      });
       closeCardPaymentModal();
       save();
       render();
