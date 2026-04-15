@@ -787,9 +787,8 @@
                 <label>Investimento</label>
                 <input id="limitInvestimento" type="number" step="0.01" />
               </div>
-              <div class="field save-limits-field" style="justify-content:end;">
-                <label>&nbsp;</label>
-                <button class="primary full-btn" id="saveLimits">Salvar</button>
+              <div style="grid-column:1/-1;margin-top:4px;">
+                <button class="primary full-btn" id="saveLimits">💾 Salvar</button>
               </div>
             </div>
           </div>
@@ -997,13 +996,17 @@
 
       Object.keys(migrated.limitsByMonth).forEach((key) => {
         const monthLimits = migrated.limitsByMonth[key] || {};
-        migrated.limitsByMonth[key] = {
-          total: Number(monthLimits.total || 0),
-          Essenciais: Number(monthLimits.Essenciais || 0),
-          Fixos: Number(monthLimits.Fixos || 0),
-          'Variável': Number(monthLimits['Variável'] || 0),
-          'Investimento': Number(monthLimits['Investimento'] || 0),
-        };
+        // Only rewrite if has old-format fields OR missing new-format fields
+        const hasOldFields = 'Essenciais' in monthLimits || 'Fixos' in monthLimits || 'Variáveis' in monthLimits;
+        const hasNewFields = 'Essencial' in monthLimits;
+        if (hasOldFields || !hasNewFields) {
+          migrated.limitsByMonth[key] = {
+            total: Number(monthLimits.total || 0),
+            Essencial: Number(monthLimits.Essencial || 0) + Number(monthLimits.Essenciais || 0) + Number(monthLimits.Fixos || 0),
+            'Variável': Number(monthLimits['Variável'] || 0) + Number(monthLimits['Variáveis'] || 0),
+            Investimento: Number(monthLimits.Investimento || 0) + Number(monthLimits['Estratégico'] || 0),
+          };
+        }
       });
 
       migrated.version = DATA_VERSION;
@@ -1153,7 +1156,9 @@
           for (let i = 0; i < purchase.installments; i++) {
             const current = new Date(baseMonth.getFullYear(), baseMonth.getMonth() + i, 1);
             const mKey = current.getFullYear() + '-' + current.getMonth();
-            const mStatus = (purchase.statusByMonth && purchase.statusByMonth[mKey]) || 'previsto';
+            const mStatus = (purchase.statusByMonth && purchase.statusByMonth[mKey] !== undefined)
+              ? purchase.statusByMonth[mKey]
+              : (purchase.status || 'previsto');
             entries.push({
               sourceId: purchase.id,
               description: purchase.description,
@@ -1580,7 +1585,7 @@
         }, 0);
         // Determine payment date and status from items
         const payDate = items[0]?.paymentDate || items[0]?.date || '';
-        const allEfetivado = items.every(p => p.status === 'efetivado');
+        const allEfetivado = items.every(p => getPurchaseStatusForMonth(p, data.currentYear, data.currentMonth) === 'efetivado');
         const status = allEfetivado ? 'efetivado' : 'previsto';
         return `<div style="display:flex;align-items:center;padding:8px 0;gap:8px;border-bottom:1px solid var(--border);">
           <div style="width:32px;height:32px;border-radius:8px;background:var(--card-2);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;">💳</div>
@@ -1863,13 +1868,32 @@
 
     function saveLimits() {
       const key = getCurrentMonthKey();
-      data.limitsByMonth[key] = {
+      data.limitsByMonth[key] = getCurrentLimitValues();
+      save(); render();
+    }
+
+    function getCurrentLimitValues() {
+      return {
         total: Number(document.getElementById('monthlyLimit').value || 0),
         Essencial: Number(document.getElementById('limitEssencial').value || 0),
         'Variável': Number(document.getElementById('limitVariavel').value || 0),
         Investimento: Number(document.getElementById('limitInvestimento').value || 0),
       };
-      render();
+    }
+
+    function applyLimitsToAllMonths() {
+      const year = data.currentYear;
+      if (!confirm('Aplicar estes limites a todos os 12 meses de ' + year + '?')) return;
+      // First save current month to ensure data.limitsByMonth has latest values
+      const currentKey = getCurrentMonthKey();
+      data.limitsByMonth[currentKey] = getCurrentLimitValues();
+      // Use the saved values for current month as template
+      const vals = { ...data.limitsByMonth[currentKey] };
+      for (let m = 0; m < 12; m++) {
+        data.limitsByMonth[monthKey(year, m)] = { ...vals };
+      }
+      save(); render();
+      alert('✅ Limites aplicados a Janeiro–Dezembro de ' + year + '.');
     }
 
     function addExpense() {
@@ -2049,10 +2073,13 @@
     function getMonthKey(year, month) { return year + '-' + month; }
 
     function getPurchaseStatusForMonth(p, year, month) {
-      const isMultiMonth = p.isRecurring || (p.installments || 1) > 1;
-      if (!isMultiMonth) return p.status || 'previsto';
+      // If statusByMonth exists and has an entry for this month, use it
       const mKey = getMonthKey(year, month);
-      return (p.statusByMonth && p.statusByMonth[mKey]) || 'previsto';
+      if (p.statusByMonth && p.statusByMonth[mKey] !== undefined) {
+        return p.statusByMonth[mKey];
+      }
+      // Otherwise fall back to purchase.status (legacy data)
+      return p.status || 'previsto';
     }
 
     function markPurchaseStatus(id, status) {
@@ -2097,7 +2124,8 @@
       if (status === 'efetivado') {
         // Show account selection modal
         const items = data.purchases.filter(p => {
-          if (p.account !== cardName || p.status === 'efetivado') return false;
+          const pStatus = getPurchaseStatusForMonth(p, data.currentYear, data.currentMonth);
+          if (p.account !== cardName || pStatus === 'efetivado') return false;
           const base = normalizeToMonth(p.paymentDate || p.date);
           const end = p.isRecurring && p.recurringEndDate ? normalizeToMonth(p.recurringEndDate) : new Date(base.getFullYear(), base.getMonth() + Math.max(0, (p.installments || 1) - 1), 1);
           const current = new Date(data.currentYear, data.currentMonth, 1);
@@ -2115,7 +2143,7 @@
         // Mark current month as previsto
         const mKey = getMonthKey(data.currentYear, data.currentMonth);
         data.purchases.forEach(p => {
-          if (p.account !== cardName) return;
+          if (p.account !== cardName || !p.isCard) return;
           const base = normalizeToMonth(p.paymentDate || p.date);
           const end = p.isRecurring && p.recurringEndDate ? normalizeToMonth(p.recurringEndDate) : new Date(base.getFullYear(), base.getMonth() + Math.max(0, (p.installments || 1) - 1), 1);
           const current = new Date(data.currentYear, data.currentMonth, 1);
