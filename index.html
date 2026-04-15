@@ -2073,12 +2073,20 @@
     function getMonthKey(year, month) { return year + '-' + month; }
 
     function getPurchaseStatusForMonth(p, year, month) {
-      // If statusByMonth exists and has an entry for this month, use it
       const mKey = getMonthKey(year, month);
+      // If statusByMonth has entry for this month, use it
       if (p.statusByMonth && p.statusByMonth[mKey] !== undefined) {
         return p.statusByMonth[mKey];
       }
-      // Otherwise fall back to purchase.status (legacy data)
+      const isMultiMonth = p.isRecurring || (p.installments || 1) > 1;
+      if (isMultiMonth) {
+        // For recurring/installments without statusByMonth:
+        // only use purchase.status for the base month, others are previsto
+        const baseMonth = normalizeToMonth(p.paymentDate || p.date);
+        const isSameMonth = baseMonth.getFullYear() === year && baseMonth.getMonth() === month;
+        return isSameMonth ? (p.status || 'previsto') : 'previsto';
+      }
+      // Single-month purchase: use purchase.status directly
       return p.status || 'previsto';
     }
 
